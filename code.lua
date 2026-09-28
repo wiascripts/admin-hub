@@ -3,6 +3,7 @@
 -- FULL GUI + AIMBOT (WITH VISUAL FOV) + PLAYER LIST + EXTENDED ESP + CFRAME SPEED
 -- FIXED: BHOP + TELEPORT TOOL ADDED
 -- + MOBILE: touch dragging, minimize button, floating toggle button
+-- v8.1: FIXED mobile flight (joystick + UP/DOWN buttons) + new tabbed touch-friendly menu
 -- ================================================================= --
 
 local Players = game:GetService("Players")
@@ -75,79 +76,6 @@ if Drawing then
     fovCircle.Filled = false
     fovCircle.Visible = false
     fovCircle.Color = Color3.fromRGB(180, 0, 255)
-end
-
--- ========== GUI CREATION ==========
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WiaHubGUI_v8"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 340, 0, 680)
-MainFrame.Position = UDim2.new(0, 10, 0, 10)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
-MainFrame.BackgroundTransparency = 0.25
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.Text = "WIA HUB v8.0"
-Title.TextColor3 = Color3.fromRGB(180, 0, 255)
-Title.TextScaled = true
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
-
-local Underline = Instance.new("Frame")
-Underline.Size = UDim2.new(1, -20, 0, 1)
-Underline.Position = UDim2.new(0, 10, 0, 30)
-Underline.BackgroundColor3 = Color3.fromRGB(180, 0, 255)
-Underline.BackgroundTransparency = 0.3
-Underline.Parent = MainFrame
-
-local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Size = UDim2.new(1, 0, 1, -35)
-ScrollingFrame.Position = UDim2.new(0, 0, 0, 35)
-ScrollingFrame.BackgroundTransparency = 1
-ScrollingFrame.BorderSizePixel = 0
-ScrollingFrame.ScrollBarThickness = 6
-ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(180, 0, 255)
-ScrollingFrame.Parent = MainFrame
-
-local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, 0, 0, 0)
-Container.BackgroundTransparency = 1
-Container.Parent = ScrollingFrame
-
--- DYNAMIC LAYOUT ENGINE
-local currentYOffset = 5
-local function getNextY(height)
-    local y = currentYOffset
-    currentYOffset = currentYOffset + height + 5
-    return y
-end
-
-local function refreshCanvas()
-    Container.Size = UDim2.new(1, 0, 0, currentYOffset + 20)
-    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, currentYOffset + 20)
-end
-
--- STATUS BAR
-local StatusBar = Instance.new("TextLabel")
-StatusBar.Size = UDim2.new(1, -20, 0, 25)
-StatusBar.Text = "Ready"
-StatusBar.TextColor3 = Color3.fromRGB(150, 150, 180)
-StatusBar.TextScaled = true
-StatusBar.BackgroundTransparency = 1
-StatusBar.Font = Enum.Font.Gotham
-
-local function setStatus(text, color)
-    StatusBar.Text = text
-    StatusBar.TextColor3 = color or Color3.fromRGB(150, 150, 180)
 end
 
 -- PLAYER LIST GUI
@@ -236,22 +164,186 @@ local function makeDraggable(frame, handle)
         end
     end)
 end
-makeDraggable(MainFrame, Title)
-makeDraggable(PlayerListMain, PlayerListTitle)
 
--- ========== MINIMIZE BUTTON ==========
+-- ========== GUI CREATION (v8.1: tabbed, touch-friendly menu) ==========
+local TweenService = game:GetService("TweenService")
+
+local UI_ACCENT = Color3.fromRGB(180, 0, 255)
+local UI_BG     = Color3.fromRGB(12, 12, 22)
+local UI_ROW    = Color3.fromRGB(26, 26, 42)
+local UI_DIM    = Color3.fromRGB(150, 150, 180)
+local UI_WHITE  = Color3.fromRGB(255, 255, 255)
+
+local function addCorner(obj, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 8)
+    c.Parent = obj
+    return c
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "WiaHubGUI_v8"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+-- menu size adapts to the screen (phones have very little height)
+local viewport0 = Camera.ViewportSize
+local menuW = math.clamp(viewport0.X - 20, 250, 330)
+local menuH = math.clamp(viewport0.Y - 40, 240, 470)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, menuW, 0, menuH)
+MainFrame.Position = UDim2.new(0, 10, 0, 10)
+MainFrame.BackgroundColor3 = UI_BG
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+addCorner(MainFrame, 12)
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = UI_ACCENT
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0.3
+mainStroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 0, 34)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "WIA HUB v8.0"
+Title.TextColor3 = UI_ACCENT
+Title.TextSize = 17
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+local Underline = Instance.new("Frame")
+Underline.Size = UDim2.new(1, -20, 0, 1)
+Underline.Position = UDim2.new(0, 10, 0, 34)
+Underline.BackgroundColor3 = UI_ACCENT
+Underline.BackgroundTransparency = 0.4
+Underline.BorderSizePixel = 0
+Underline.Parent = MainFrame
+
+-- MINIMIZE BUTTON
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 24, 0, 24)
-MinBtn.Position = UDim2.new(1, -30, 0, 3)
+MinBtn.Size = UDim2.new(0, 28, 0, 24)
+MinBtn.Position = UDim2.new(1, -36, 0, 5)
 MinBtn.Text = "—"
-MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
+MinBtn.TextColor3 = UI_WHITE
+MinBtn.BackgroundColor3 = Color3.fromRGB(60, 35, 95)
 MinBtn.BorderSizePixel = 0
 MinBtn.Font = Enum.Font.GothamBold
 MinBtn.TextSize = 16
 MinBtn.ZIndex = 5
 MinBtn.Parent = MainFrame
+addCorner(MinBtn, 6)
 
+-- TAB BAR (horizontal, swipeable)
+local TabBar = Instance.new("ScrollingFrame")
+TabBar.Size = UDim2.new(1, -12, 0, 30)
+TabBar.Position = UDim2.new(0, 6, 0, 39)
+TabBar.BackgroundTransparency = 1
+TabBar.BorderSizePixel = 0
+TabBar.ScrollBarThickness = 0
+TabBar.ScrollingDirection = Enum.ScrollingDirection.X
+TabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+TabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
+TabBar.Parent = MainFrame
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 6)
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Parent = TabBar
+
+-- PAGE AREA
+local PageHolder = Instance.new("Frame")
+PageHolder.Size = UDim2.new(1, 0, 1, -98)
+PageHolder.Position = UDim2.new(0, 0, 0, 74)
+PageHolder.BackgroundTransparency = 1
+PageHolder.ClipsDescendants = true
+PageHolder.Parent = MainFrame
+
+-- STATUS BAR
+local StatusBar = Instance.new("TextLabel")
+StatusBar.Size = UDim2.new(1, -20, 0, 20)
+StatusBar.Position = UDim2.new(0, 10, 1, -22)
+StatusBar.Text = "Ready"
+StatusBar.TextColor3 = UI_DIM
+StatusBar.TextSize = 12
+StatusBar.TextXAlignment = Enum.TextXAlignment.Left
+StatusBar.BackgroundTransparency = 1
+StatusBar.Font = Enum.Font.Gotham
+StatusBar.Parent = MainFrame
+
+local function setStatus(text, color)
+    StatusBar.Text = text
+    StatusBar.TextColor3 = color or UI_DIM
+end
+
+-- TABS
+local tabs, currentPage, tabCount = {}, nil, 0
+
+local function selectTab(name)
+    for n, t in pairs(tabs) do
+        local on = (n == name)
+        t.page.Visible = on
+        t.btn.BackgroundColor3 = on and UI_ACCENT or UI_ROW
+        t.btn.TextColor3 = on and UI_WHITE or UI_DIM
+    end
+end
+
+local function createTab(name)
+    tabCount = tabCount + 1
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, math.max(64, #name * 9 + 22), 1, 0)
+    btn.Text = name
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamBold
+    btn.BackgroundColor3 = UI_ROW
+    btn.TextColor3 = UI_DIM
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = tabCount
+    btn.Parent = TabBar
+    addCorner(btn, 8)
+
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = UI_ACCENT
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.Visible = false
+    page.Parent = PageHolder
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = page
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 8)
+    pad.PaddingRight = UDim.new(0, 10)
+    pad.PaddingTop = UDim.new(0, 4)
+    pad.PaddingBottom = UDim.new(0, 8)
+    pad.Parent = page
+
+    tabs[name] = { btn = btn, page = page }
+    btn.MouseButton1Click:Connect(function() selectTab(name) end)
+
+    currentPage = page
+    if tabCount == 1 then selectTab(name) end
+    return page
+end
+
+-- MINIMIZE LOGIC
 local minimized = false
 local fullSize = MainFrame.Size
 
@@ -259,17 +351,24 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     if minimized then
         fullSize = MainFrame.Size
-        ScrollingFrame.Visible = false
+        TabBar.Visible = false
+        PageHolder.Visible = false
+        StatusBar.Visible = false
         Underline.Visible = false
-        MainFrame.Size = UDim2.new(0, fullSize.X.Offset, 0, 32)
+        MainFrame.Size = UDim2.new(0, fullSize.X.Offset, 0, 34)
         MinBtn.Text = "+"
     else
         MainFrame.Size = fullSize
-        ScrollingFrame.Visible = true
+        TabBar.Visible = true
+        PageHolder.Visible = true
+        StatusBar.Visible = true
         Underline.Visible = true
         MinBtn.Text = "—"
     end
 end)
+
+makeDraggable(MainFrame, Title)
+makeDraggable(PlayerListMain, PlayerListTitle)
 
 -- HIDE UI ON LCTRL
 local guiVisible = true
@@ -325,62 +424,158 @@ ToggleBtn.InputEnded:Connect(function(input)
     end
 end)
 
--- UI FACTORY FUNCTIONS
+
+-- ========== MOBILE FLIGHT CONTROLS (UP / DOWN buttons) ==========
+local flyUp, flyDown = false, false
+
+local FlyGui = Instance.new("ScreenGui")
+FlyGui.Name = "WiaFly_v8"
+FlyGui.ResetOnSpawn = false
+FlyGui.Enabled = false
+FlyGui.Parent = CoreGui
+
+local function makeFlyButton(text, position, setHeld)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 58, 0, 58)
+    b.Position = position
+    b.Text = text
+    b.TextColor3 = UI_WHITE
+    b.TextSize = 24
+    b.Font = Enum.Font.GothamBold
+    b.BackgroundColor3 = Color3.fromRGB(80, 0, 140)
+    b.BackgroundTransparency = 0.25
+    b.BorderSizePixel = 0
+    b.AutoButtonColor = true
+    b.Parent = FlyGui
+    addCorner(b, 29)
+
+    b.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setHeld(true)
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    setHeld(false)
+                end
+            end)
+        end
+    end)
+    b.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setHeld(false)
+        end
+    end)
+    return b
+end
+
+makeFlyButton("▲", UDim2.new(1, -80, 0.5, -70), function(v) flyUp = v end)
+makeFlyButton("▼", UDim2.new(1, -80, 0.5, 0), function(v) flyDown = v end)
+
+-- ========== FLIGHT (FIXED: touch joystick + respawn support) ==========
+local function stopFlight()
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+end
+
+local function startFlight()
+    stopFlight()
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = root
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    bodyGyro.P = 9e4
+    bodyGyro.CFrame = root.CFrame
+    bodyGyro.Parent = root
+end
+
+-- re-create flight objects after respawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if flightEnabled then
+        char:WaitForChild("HumanoidRootPart", 5)
+        task.wait(0.2)
+        if flightEnabled then startFlight() end
+    end
+end)
+
+-- ========== UI FACTORY FUNCTIONS ==========
+local function createSection(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 18)
+    lbl.Text = string.upper(text)
+    lbl.TextColor3 = UI_ACCENT
+    lbl.TextSize = 11
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.BackgroundTransparency = 1
+    lbl.Parent = currentPage
+    return lbl
+end
+
 local function createTumbler(labelText, defaultState)
-    local y = getNextY(30)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(0, 300, 0, 30)
-    container.Position = UDim2.new(0, 10, 0, y)
-    container.BackgroundTransparency = 1
-    container.Parent = Container
+    local row = Instance.new("TextButton")
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.BackgroundColor3 = UI_ROW
+    row.BorderSizePixel = 0
+    row.AutoButtonColor = false
+    row.Text = ""
+    row.Parent = currentPage
+    addCorner(row, 8)
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 200, 0, 30)
+    label.Size = UDim2.new(1, -70, 1, 0)
+    label.Position = UDim2.new(0, 12, 0, 0)
     label.Text = labelText
-    label.TextColor3 = Color3.fromRGB(255,255,255)
-    label.TextSize = 13
+    label.TextColor3 = UI_WHITE
+    label.TextSize = 14
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = container
+    label.Parent = row
 
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.new(0, 50, 0, 22)
-    bg.Position = UDim2.new(0, 230, 0, 4)
-    bg.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-    bg.BorderSizePixel = 0
-    bg.Parent = container
+    local pill = Instance.new("Frame")
+    pill.Size = UDim2.new(0, 44, 0, 24)
+    pill.Position = UDim2.new(1, -56, 0.5, -12)
+    pill.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+    pill.BorderSizePixel = 0
+    pill.Parent = row
+    addCorner(pill, 12)
 
     local knob = Instance.new("Frame")
     knob.Size = UDim2.new(0, 18, 0, 18)
-    knob.Position = UDim2.new(0, 2, 0, 2)
+    knob.Position = UDim2.new(0, 3, 0.5, -9)
     knob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
     knob.BorderSizePixel = 0
-    knob.Parent = bg
+    knob.Parent = pill
+    addCorner(knob, 9)
 
     local state = defaultState or false
 
-    local function updateTumbler()
-        if state then
-            bg.BackgroundColor3 = Color3.fromRGB(180, 0, 255)
-            knob.Position = UDim2.new(0, 30, 0, 2)
-            knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    local function updateTumbler(instant)
+        local knobPos = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
+        local pillCol = state and UI_ACCENT or Color3.fromRGB(60, 60, 75)
+        local knobCol = state and UI_WHITE or Color3.fromRGB(200, 200, 200)
+        if instant then
+            knob.Position = knobPos
+            pill.BackgroundColor3 = pillCol
+            knob.BackgroundColor3 = knobCol
         else
-            bg.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-            knob.Position = UDim2.new(0, 2, 0, 2)
-            knob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+            local info = TweenInfo.new(0.12, Enum.EasingStyle.Quad)
+            TweenService:Create(knob, info, { Position = knobPos, BackgroundColor3 = knobCol }):Play()
+            TweenService:Create(pill, info, { BackgroundColor3 = pillCol }):Play()
         end
     end
-    updateTumbler()
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundTransparency = 1
-    btn.Text = ""
-    btn.Parent = container
+    updateTumbler(true)
 
     local toggleEvent = Instance.new("BindableEvent")
-    btn.MouseButton1Click:Connect(function()
+    row.MouseButton1Click:Connect(function()
         state = not state
         updateTumbler()
         toggleEvent:Fire(state)
@@ -397,61 +592,146 @@ local function createTumbler(labelText, defaultState)
     }
 end
 
+-- slider drag handling (one global listener for all sliders)
+local activeSlider = nil
+UserInputService.InputChanged:Connect(function(input)
+    if activeSlider and (input == activeSlider.input
+    or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        activeSlider.apply(input.Position.X)
+    end
+end)
+
 local function createSlider(labelText, minVal, maxVal, defaultVal, callback)
-    local y = getNextY(30)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(0, 300, 0, 30)
-    container.Position = UDim2.new(0, 10, 0, y)
-    container.BackgroundTransparency = 1
-    container.Parent = Container
+    local page = currentPage
+
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 56)
+    row.BackgroundColor3 = UI_ROW
+    row.BorderSizePixel = 0
+    row.Parent = page
+    addCorner(row, 8)
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 200, 0, 30)
+    label.Size = UDim2.new(1, -90, 0, 30)
+    label.Position = UDim2.new(0, 12, 0, 2)
     label.Text = labelText
-    label.TextColor3 = Color3.fromRGB(255,255,255)
-    label.TextSize = 13
+    label.TextColor3 = UI_WHITE
+    label.TextSize = 14
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = container
+    label.Parent = row
 
     local textBox = Instance.new("TextBox")
-    textBox.Size = UDim2.new(0, 50, 0, 22)
-    textBox.Position = UDim2.new(0, 230, 0, 4)
+    textBox.Size = UDim2.new(0, 56, 0, 24)
+    textBox.Position = UDim2.new(1, -68, 0, 6)
     textBox.Text = tostring(defaultVal)
-    textBox.TextColor3 = Color3.fromRGB(255,255,255)
-    textBox.BackgroundColor3 = Color3.fromRGB(40,40,55)
+    textBox.TextColor3 = UI_WHITE
+    textBox.BackgroundColor3 = Color3.fromRGB(40, 40, 58)
     textBox.BorderSizePixel = 0
     textBox.Font = Enum.Font.Gotham
-    textBox.TextSize = 12
-    textBox.Parent = container
+    textBox.TextSize = 13
+    textBox.ClearTextOnFocus = false
+    textBox.Parent = row
+    addCorner(textBox, 6)
 
-    textBox.FocusLost:Connect(function()
-        local num = tonumber(textBox.Text)
-        if num and num >= minVal and num <= maxVal then
-            callback(num)
-            textBox.Text = tostring(num)
-        else
-            textBox.Text = tostring(defaultVal)
-            callback(defaultVal)
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, -28, 0, 6)
+    track.Position = UDim2.new(0, 14, 0, 42)
+    track.BackgroundColor3 = Color3.fromRGB(50, 50, 72)
+    track.BorderSizePixel = 0
+    track.Parent = row
+    addCorner(track, 3)
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0, 0, 1, 0)
+    fill.BackgroundColor3 = UI_ACCENT
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    addCorner(fill, 3)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 16, 0, 16)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new(0, 0, 0.5, 0)
+    knob.BackgroundColor3 = UI_WHITE
+    knob.BorderSizePixel = 0
+    knob.ZIndex = 2
+    knob.Parent = track
+    addCorner(knob, 8)
+
+    -- big invisible touch area over the track
+    local hit = Instance.new("TextButton")
+    hit.Size = UDim2.new(1, 0, 0, 26)
+    hit.Position = UDim2.new(0, 0, 0, 30)
+    hit.BackgroundTransparency = 1
+    hit.Text = ""
+    hit.Parent = row
+
+    local value = defaultVal
+
+    local function setVisual(v)
+        local a = (v - minVal) / (maxVal - minVal)
+        a = math.clamp(a, 0, 1)
+        fill.Size = UDim2.new(a, 0, 1, 0)
+        knob.Position = UDim2.new(a, 0, 0.5, 0)
+        textBox.Text = tostring(v)
+    end
+    setVisual(value)
+
+    local function applyFromX(x)
+        local a = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+        local v = math.floor(minVal + a * (maxVal - minVal) + 0.5)
+        setVisual(v)
+        if v ~= value then
+            value = v
+            callback(v)
+        end
+    end
+
+    hit.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            activeSlider = { apply = applyFromX, input = input }
+            page.ScrollingEnabled = false -- don't scroll the page while dragging
+            applyFromX(input.Position.X)
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    if activeSlider and activeSlider.input == input then
+                        activeSlider = nil
+                    end
+                    page.ScrollingEnabled = true
+                end
+            end)
         end
     end)
 
-    return { setValue = function(val) textBox.Text = tostring(val) end }
+    textBox.FocusLost:Connect(function()
+        local num = tonumber(textBox.Text)
+        if num then
+            num = math.floor(math.clamp(num, minVal, maxVal) + 0.5)
+            value = num
+            setVisual(num)
+            callback(num)
+        else
+            setVisual(value)
+        end
+    end)
+
+    return { setValue = function(val) value = val setVisual(val) end }
 end
 
 local function createButton(labelText, callback)
-    local y = getNextY(30)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 280, 0, 26)
-    btn.Position = UDim2.new(0, 10, 0, y)
+    btn.Size = UDim2.new(1, 0, 0, 38)
     btn.Text = labelText
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
+    btn.TextColor3 = UI_WHITE
+    btn.BackgroundColor3 = Color3.fromRGB(70, 35, 115)
     btn.BorderSizePixel = 0
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.Parent = Container
+    btn.TextSize = 14
+    btn.Parent = currentPage
+    addCorner(btn, 8)
 
     btn.MouseButton1Click:Connect(callback)
     return btn
@@ -621,14 +901,17 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ========== CREATING ALL TOGGLES & SLIDERS ==========
+-- ========== CREATING ALL TOGGLES & SLIDERS (grouped by tabs) ==========
 
--- COMBAT & AIM
+-- ===== TAB: COMBAT =====
+createTab("Combat")
+createSection("Aimbot")
 createTumbler("Aimbot", false).onToggle(function(st) aimbotEnabled = st setStatus(st and "Aimbot ON" or "Aimbot OFF") end)
 createTumbler("Aimbot FOV Circle", true).onToggle(function(st) fovCircleVisible = st end)
 createSlider("Aimbot FOV", 10, 400, 90, function(val) aimbotFOV = val end)
 createSlider("Aimbot Smooth", 1, 20, 5, function(val) aimbotSmoothness = val end)
 createTumbler("Triggerbot (AutoShot)", false).onToggle(function(st) triggerbotEnabled = st end)
+createSection("Hitbox")
 createTumbler("Hitbox Expander", false).onToggle(function(st)
     hitboxEnabled = st
     if not st then
@@ -641,7 +924,9 @@ createTumbler("Hitbox Expander", false).onToggle(function(st)
 end)
 createSlider("Hitbox Size", 2, 20, 5, function(val) hitboxSize = val end)
 
--- ESP & VISUALS
+-- ===== TAB: VISUALS =====
+createTab("Visuals")
+createSection("ESP")
 createTumbler("ESP Boxes", true).onToggle(function(st) espBoxEnabled = st end)
 createTumbler("ESP Tracers", true).onToggle(function(st) espTracerEnabled = st end)
 createTumbler("ESP Names", true).onToggle(function(st) espNamesEnabled = st end)
@@ -657,22 +942,25 @@ createTumbler("Wallhack (Highlight)", false).onToggle(function(st)
     end
 end)
 
--- MOVEMENT & FLIGHT
+-- ===== TAB: MOVE =====
+createTab("Move")
+createSection("Flight")
 createTumbler("Flight", false).onToggle(function(st)
     flightEnabled = st
-    if st and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        bodyVelocity = Instance.new("BodyVelocity", LocalPlayer.Character.HumanoidRootPart)
-        bodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-        bodyGyro = Instance.new("BodyGyro", LocalPlayer.Character.HumanoidRootPart)
-        bodyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    flyUp, flyDown = false, false
+    FlyGui.Enabled = st
+    if st then
+        startFlight()
+        setStatus("Flight ON - joystick + ▲/▼ buttons", Color3.fromRGB(0, 255, 150))
     else
-        if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
-        if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+        stopFlight()
+        setStatus("Flight OFF")
     end
 end)
 createSlider("Fly Speed", 10, 300, 50, function(val) flySpeed = val end)
-
 createTumbler("Noclip", false).onToggle(function(st) noclipEnabled = st end)
+
+createSection("Speed & Jump")
 createTumbler("CFrame Speed (Bypass)", false).onToggle(function(st) cframeSpeedEnabled = st end)
 createSlider("CFrame Speed Multiplier", 1, 10, 2, function(val) cframeSpeedValue = val end)
 
@@ -692,10 +980,13 @@ end)
 
 createTumbler("Infinite Jump", false).onToggle(function(st) infiniteJumpEnabled = st end)
 createTumbler("Bhop (FIXED)", false).onToggle(function(st) bhopEnabled = st end)
+createSection("Spinbot")
 createTumbler("Spinbot", false).onToggle(function(st) spinbotEnabled = st end)
 createSlider("Spinbot Speed", 5, 50, 20, function(val) spinbotSpeed = val end)
 
--- PLAYER UTILITIES
+-- ===== TAB: PLAYER =====
+createTab("Player")
+createSection("Protection")
 createTumbler("Godmode", false).onToggle(function(st)
     godmodeEnabled = st
     if st and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -705,6 +996,7 @@ end)
 createTumbler("Anti-Void", false).onToggle(function(st) antiVoidEnabled = st end)
 createTumbler("Anti-Fall Damage", false).onToggle(function(st) antiFallEnabled = st end)
 createTumbler("Anti-AFK", false).onToggle(function(st) antiAFKEnabled = st end)
+createSection("Players & Teleport")
 createTumbler("Player List GUI", false).onToggle(function(st)
     playerListEnabled = st
     PlayerListGui.Enabled = st
@@ -732,7 +1024,9 @@ createTumbler("Teleport Tool", false).onToggle(function(st)
     end
 end)
 
--- WORLD & RENDER
+-- ===== TAB: WORLD =====
+createTab("World")
+createSection("Lighting")
 createTumbler("FullBright", false).onToggle(function(st)
     fullBrightEnabled = st
     if st then
@@ -756,14 +1050,18 @@ createTumbler("No Fog (FPS Boost)", false).onToggle(function(st)
     end
 end)
 
+createSection("Camera")
 createSlider("Camera FOV", 50, 120, 70, function(val) Camera.FieldOfView = val end)
 
--- AUTOMATION
+-- ===== TAB: MISC =====
+createTab("Misc")
+createSection("Automation")
 createTumbler("AutoClicker", false).onToggle(function(st) autoClickerEnabled = st end)
 createSlider("Click Delay (ms)", 10, 1000, 100, function(val) autoClickerDelay = val end)
 createTumbler("Chat Spam", false).onToggle(function(st) chatSpamEnabled = st end)
 
 -- REJOIN & SERVER HOP BUTTONS
+createSection("Server")
 createButton("Rejoin Server", function()
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
 end)
@@ -778,33 +1076,61 @@ createButton("Server Hop", function()
     end
 end)
 
--- Attach status bar at bottom
-local sY = getNextY(25)
-StatusBar.Position = UDim2.new(0, 10, 0, sY)
-StatusBar.Parent = Container
-
-refreshCanvas()
+-- open first tab
+selectTab("Combat")
 
 -- ========== GAME LOOPS & HEARTBEAT ==========
 
--- Flight Loop
+-- Flight Loop (FIXED: works with the mobile joystick and on-screen ▲/▼ buttons)
 RunService.Heartbeat:Connect(function()
-    if flightEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and bodyVelocity then
-        local root = LocalPlayer.Character.HumanoidRootPart
-        local moveDir = Vector3.new(0,0,0)
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
+    if not flightEnabled then return end
 
-        if moveDir.Magnitude > 0 then
-            bodyVelocity.Velocity = moveDir.Unit * flySpeed
-            bodyGyro.CFrame = CFrame.new(root.Position, root.Position + moveDir)
-        else
-            bodyVelocity.Velocity = Vector3.new(0,0,0)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not (root and hum) then return end
+
+    -- flight objects were destroyed (respawn etc.) -> recreate
+    if not bodyVelocity or not bodyVelocity.Parent or not bodyGyro or not bodyGyro.Parent then
+        startFlight()
+        if not bodyVelocity then return end
+    end
+
+    local moveDir = Vector3.new(0, 0, 0)
+
+    -- Joystick (mobile) and WASD (PC): Humanoid.MoveDirection works for both
+    local md = hum.MoveDirection
+    if md.Magnitude > 0.01 then
+        local camCF = Camera.CFrame
+        local look = camCF.LookVector
+        local right = camCF.RightVector
+        local flatLook = Vector3.new(look.X, 0, look.Z)
+        if flatLook.Magnitude < 0.01 then
+            -- camera looks straight up/down: use the camera's up vector instead
+            flatLook = Vector3.new(camCF.UpVector.X, 0, camCF.UpVector.Z)
         end
+        local flatRight = Vector3.new(right.X, 0, right.Z)
+        if flatLook.Magnitude > 0.01 and flatRight.Magnitude > 0.01 then
+            local fwd = md:Dot(flatLook.Unit)
+            local side = md:Dot(flatRight.Unit)
+            -- forward follows the camera pitch, so you fly up/down where you look
+            moveDir = look * fwd + right * side
+        end
+    end
+
+    -- Up / Down: on-screen buttons (mobile) or Space / LeftShift (PC)
+    if flyUp or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        moveDir = moveDir + Vector3.new(0, 1, 0)
+    end
+    if flyDown or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+        moveDir = moveDir - Vector3.new(0, 1, 0)
+    end
+
+    if moveDir.Magnitude > 0.01 then
+        bodyVelocity.Velocity = moveDir.Unit * flySpeed
+        bodyGyro.CFrame = CFrame.new(root.Position, root.Position + moveDir)
+    else
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
     end
 end)
 
