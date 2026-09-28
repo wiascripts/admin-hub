@@ -5,6 +5,7 @@
 -- + MOBILE: touch dragging, minimize button, floating toggle button
 -- v8.1: FIXED mobile flight (joystick + UP/DOWN buttons) + new tabbed touch-friendly menu
 -- v8.2: mobile-friendly player list (TP / AIM buttons, close, reset, auto-refresh)
+-- v8.3: cosmetic GUI overhaul - animated rainbow border, glow title, smooth tab transitions
 -- ================================================================= --
 
 local Players = game:GetService("Players")
@@ -279,22 +280,73 @@ MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 addCorner(MainFrame, 12)
 
+-- soft glow behind the whole panel (blurred neon square)
+local PanelGlow = Instance.new("ImageLabel")
+PanelGlow.Name = "PanelGlow"
+PanelGlow.Size = UDim2.new(1, 40, 1, 40)
+PanelGlow.Position = UDim2.new(0, -20, 0, -20)
+PanelGlow.BackgroundTransparency = 1
+PanelGlow.Image = "rbxasset://textures/ui/Glow.png"
+PanelGlow.ImageColor3 = UI_ACCENT
+PanelGlow.ImageTransparency = 0.55
+PanelGlow.ScaleType = Enum.ScaleType.Slice
+PanelGlow.SliceCenter = Rect.new(20, 20, 80, 80)
+PanelGlow.ZIndex = 0
+PanelGlow.Parent = MainFrame
+
 local mainStroke = Instance.new("UIStroke")
 mainStroke.Color = UI_ACCENT
-mainStroke.Thickness = 1.5
-mainStroke.Transparency = 0.3
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.15
 mainStroke.Parent = MainFrame
+
+-- animated rainbow gradient riding along the stroke
+local mainStrokeGradient = Instance.new("UIGradient")
+mainStrokeGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(180, 0, 255)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 200, 255)),
+    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(255, 0, 170)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(180, 0, 255)),
+})
+mainStrokeGradient.Parent = mainStroke
+
+task.spawn(function()
+    local t = 0
+    while mainStroke.Parent do
+        t = t + 0.01
+        mainStrokeGradient.Rotation = (t * 60) % 360
+        task.wait(0.03)
+    end
+end)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 0, 34)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "WIA HUB v8.0"
-Title.TextColor3 = UI_ACCENT
+Title.Text = "WIA HUB v8.3"
+Title.TextColor3 = UI_WHITE
 Title.TextSize = 17
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
+
+-- rainbow gradient text on the title itself
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(180, 0, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 220, 255)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 170)),
+})
+titleGradient.Parent = Title
+
+task.spawn(function()
+    local t = 0
+    while Title.Parent do
+        t = t + 0.01
+        titleGradient.Offset = Vector2.new(math.sin(t) * 0.5, 0)
+        task.wait(0.03)
+    end
+end)
 
 local Underline = Instance.new("Frame")
 Underline.Size = UDim2.new(1, -20, 0, 1)
@@ -367,9 +419,25 @@ local tabs, currentPage, tabCount = {}, nil, 0
 local function selectTab(name)
     for n, t in pairs(tabs) do
         local on = (n == name)
-        t.page.Visible = on
-        t.btn.BackgroundColor3 = on and UI_ACCENT or UI_ROW
-        t.btn.TextColor3 = on and UI_WHITE or UI_DIM
+
+        -- smooth color tween on the tab button
+        TweenService:Create(t.btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = on and UI_ACCENT or UI_ROW,
+            TextColor3 = on and UI_WHITE or UI_DIM,
+        }):Play()
+
+        if on then
+            t.page.Visible = true
+            -- small pop-in scale so the switch feels alive, without touching content transparency
+            local scale = t.page:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+            scale.Parent = t.page
+            scale.Scale = 0.96
+            TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Scale = 1,
+            }):Play()
+        else
+            t.page.Visible = false
+        end
     end
 end
 
@@ -479,6 +547,31 @@ ToggleBtn.Parent = ToggleGui
 local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(1, 0)
 toggleCorner.Parent = ToggleBtn
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Thickness = 2
+toggleStroke.Color = UI_ACCENT
+toggleStroke.Transparency = 0.2
+toggleStroke.Parent = ToggleBtn
+
+local toggleStrokeGradient = Instance.new("UIGradient")
+toggleStrokeGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(180, 0, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 220, 255)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 170)),
+})
+toggleStrokeGradient.Parent = toggleStroke
+
+-- gentle breathing pulse on the ring + spinning gradient
+task.spawn(function()
+    local t = 0
+    while ToggleBtn.Parent do
+        t = t + 0.02
+        toggleStroke.Transparency = 0.15 + math.sin(t * 2) * 0.15
+        toggleStrokeGradient.Rotation = (t * 80) % 360
+        task.wait(0.03)
+    end
+end)
 
 makeDraggable(ToggleBtn)
 
@@ -810,6 +903,16 @@ local function createButton(labelText, callback)
     btn.TextSize = 14
     btn.Parent = currentPage
     addCorner(btn, 8)
+
+    local btnScale = Instance.new("UIScale")
+    btnScale.Parent = btn
+
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btnScale, TweenInfo.new(0.08), { Scale = 0.95 }):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        TweenService:Create(btnScale, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+    end)
 
     btn.MouseButton1Click:Connect(callback)
     return btn
@@ -1472,4 +1575,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-setStatus("WIA HUB v8.2 Loaded! | Mobile player list", Color3.fromRGB(0, 255, 150))
+setStatus("WIA HUB v8.3 Loaded! | Mobile UI + FX", Color3.fromRGB(0, 255, 150))
