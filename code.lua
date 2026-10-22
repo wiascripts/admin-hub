@@ -1,49 +1,49 @@
 -- ================================================================= --
--- WIA HUB v10.0 Ultimate :: whitewia / tordark
--- Soft dark theme (no neon) + Skeleton ESP + Chams + Silent Aim
--- + Dash + Anti-Fling + Anti-Ragdoll + Notifications + Watermark
--- + Loading Screen + Hub Toggle Keybind + Fixed Flight
+-- WIA HUB v11.0 Ultimate :: whitewia / tordark
+-- Search + Silent Aim (fixed) + Wallcheck + AutoShoot + Hitbox Priority
+-- + Item ESP + Team Check + Skeleton (fixed) + Color Picker
+-- + Low Gravity + Wall Run + Freecam + Spectate + Cosmetics + Animations
 -- ================================================================= --
 
-local Players           = game:GetService("Players")
-local RunService        = game:GetService("RunService")
-local UserInputService  = game:GetService("UserInputService")
-local Lighting          = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService   = game:GetService("TeleportService")
-local HttpService       = game:GetService("HttpService")
-local TweenService      = game:GetService("TweenService")
-local InsertService     = game:GetService("InsertService")
-local Stats             = game:GetService("Stats")
-local Debris            = game:GetService("Debris")
-local CoreGui           = game:GetService("CoreGui")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local InsertService = game:GetService("InsertService")
+local Stats = game:GetService("Stats")
+local Debris = game:GetService("Debris")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local Camera      = workspace.CurrentCamera
-local Mouse       = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
--- ========== COLOR PALETTE (soft, no neon) ==========
-local C_BG     = Color3.fromRGB(18, 18, 24)
-local C_PANEL  = Color3.fromRGB(26, 26, 34)
-local C_ROW    = Color3.fromRGB(32, 32, 42)
-local C_ROW_D  = Color3.fromRGB(26, 26, 34)
+-- ========== COLORS (soft, no neon) ==========
+local C_BG = Color3.fromRGB(18, 18, 24)
+local C_PANEL = Color3.fromRGB(26, 26, 34)
+local C_ROW = Color3.fromRGB(32, 32, 42)
+local C_ROW_D = Color3.fromRGB(26, 26, 34)
 local C_ACCENT = Color3.fromRGB(124, 92, 255)
-local C_TEXT   = Color3.fromRGB(232, 232, 240)
-local C_DIM    = Color3.fromRGB(140, 140, 158)
+local C_TEXT = Color3.fromRGB(232, 232, 240)
+local C_DIM = Color3.fromRGB(140, 140, 158)
 local C_STROKE = Color3.fromRGB(50, 50, 65)
-local C_OK     = Color3.fromRGB(90, 200, 130)
-local C_ERR    = Color3.fromRGB(210, 90, 90)
+local C_OK = Color3.fromRGB(90, 200, 130)
+local C_ERR = Color3.fromRGB(210, 90, 90)
 
-local function addCorner(obj, radius)
+local function addCorner(obj, r)
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 8)
+    c.CornerRadius = UDim.new(0, r or 8)
     c.Parent = obj
     return c
 end
 
--- ========== NOTIFICATIONS SYSTEM ==========
+-- ========== NOTIFICATIONS ==========
 local NotifGui = Instance.new("ScreenGui")
-NotifGui.Name = "WiaNotifs_v10"
+NotifGui.Name = "WiaNotifs"
 NotifGui.ResetOnSpawn = false
 NotifGui.DisplayOrder = 200
 NotifGui.Parent = CoreGui
@@ -54,257 +54,428 @@ NotifHolder.Position = UDim2.new(1, -272, 0, 20)
 NotifHolder.BackgroundTransparency = 1
 NotifHolder.Parent = NotifGui
 
-local NotifLayout = Instance.new("UIListLayout")
-NotifLayout.Padding = UDim.new(0, 8)
-NotifLayout.SortOrder = Enum.SortOrder.LayoutOrder
-NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-NotifLayout.Parent = NotifHolder
+local NL = Instance.new("UIListLayout")
+NL.Padding = UDim.new(0, 8)
+NL.SortOrder = Enum.SortOrder.LayoutOrder
+NL.Parent = NotifHolder
 
-local notifOrder = 0
+local nOrder = 0
 local function notify(text, kind)
-    notifOrder = notifOrder + 1
-    local color = kind == "error" and C_ERR or kind == "success" and C_OK or C_ACCENT
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 46)
-    frame.BackgroundColor3 = C_PANEL
-    frame.BorderSizePixel = 0
-    frame.LayoutOrder = notifOrder
-    frame.ClipsDescendants = true
-    frame.Parent = NotifHolder
-    addCorner(frame, 10)
-
-    local accent = Instance.new("Frame")
-    accent.Size = UDim2.new(0, 3, 1, 0)
-    accent.BackgroundColor3 = color
-    accent.BorderSizePixel = 0
-    accent.Parent = frame
-    addCorner(accent, 2)
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -22, 1, 0)
-    lbl.Position = UDim2.new(0, 14, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = C_TEXT
-    lbl.TextSize = 13
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextWrapped = true
-    lbl.Parent = frame
-
-    local scale = Instance.new("UIScale")
-    scale.Scale = 0.85
-    scale.Parent = frame
-    TweenService:Create(scale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-
+    nOrder = nOrder + 1
+    local col = kind == "error" and C_ERR or kind == "success" and C_OK or C_ACCENT
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 0, 46)
+    f.BackgroundColor3 = C_PANEL
+    f.BorderSizePixel = 0
+    f.LayoutOrder = nOrder
+    f.ClipsDescendants = true
+    f.Parent = NotifHolder
+    addCorner(f, 10)
+    local a = Instance.new("Frame")
+    a.Size = UDim2.new(0, 3, 1, 0)
+    a.BackgroundColor3 = col
+    a.BorderSizePixel = 0
+    a.Parent = f
+    addCorner(a, 2)
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -22, 1, 0)
+    l.Position = UDim2.new(0, 14, 0, 0)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = C_TEXT
+    l.TextSize = 13
+    l.Font = Enum.Font.Gotham
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextWrapped = true
+    l.Parent = f
+    local s = Instance.new("UIScale")
+    s.Scale = 0.85
+    s.Parent = f
+    TweenService:Create(s, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
     task.delay(2.6, function()
-        TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(lbl, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
-        TweenService:Create(accent, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(f, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+        TweenService:Create(l, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+        TweenService:Create(a, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
         task.wait(0.3)
-        frame:Destroy()
+        f:Destroy()
     end)
 end
 
--- ========== LOADING SCREEN ==========
-local LoadingGui = Instance.new("ScreenGui")
-LoadingGui.Name = "WiaLoading_v10"
-LoadingGui.IgnoreGuiInset = true
-LoadingGui.ResetOnSpawn = false
-LoadingGui.DisplayOrder = 999
-LoadingGui.Parent = CoreGui
+-- ========== STATE ==========
+local flightEnabled, noclipEnabled = false, false
+local flySpeed = 50
+local bodyVelocity, bodyGyro = nil, nil
+local savedGravity = workspace.Gravity
+local flyUp, flyDown = false, false
 
-local LoadingBg = Instance.new("Frame")
-LoadingBg.Size = UDim2.new(1, 0, 1, 0)
-LoadingBg.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
-LoadingBg.BorderSizePixel = 0
-LoadingBg.Parent = LoadingGui
+local cframeSpeedEnabled, cframeSpeedValue = false, 2
+local walkSpeedValue, jumpPowerValue = 16, 50
+local infiniteJumpEnabled, bhopEnabled = false, false
+local spinbotEnabled, spinbotSpeed = false, 20
 
-local LoadingTitle = Instance.new("TextLabel")
-LoadingTitle.Size = UDim2.new(0, 400, 0, 60)
-LoadingTitle.Position = UDim2.new(0.5, -200, 0.5, -85)
-LoadingTitle.BackgroundTransparency = 1
-LoadingTitle.Text = "WIA HUB"
-LoadingTitle.TextColor3 = C_ACCENT
-LoadingTitle.TextSize = 46
-LoadingTitle.Font = Enum.Font.GothamBold
-LoadingTitle.Parent = LoadingBg
+local godmodeEnabled = false
+local tpToolEnabled, tpEnabled = false, false
+local wallhackEnabled, chamsOpacity = false, 0.35
+local antiAFKEnabled, playerListEnabled = false, false
+local antiVoidEnabled, antiFallEnabled = false, false
+local antiFlingEnabled, antiRagdollEnabled = false, false
+local lowGravityEnabled = false
+local wallRunEnabled = false
+local freecamEnabled = false
+local spectateTarget = nil
+local fullBrightEnabled, noFogEnabled = false, false
+local origBright, origAmbient, origFog = nil, nil, nil
 
-local LoadingSub = Instance.new("TextLabel")
-LoadingSub.Size = UDim2.new(0, 400, 0, 22)
-LoadingSub.Position = UDim2.new(0.5, -200, 0.5, -22)
-LoadingSub.BackgroundTransparency = 1
-LoadingSub.Text = "v10.0 Ultimate Edition"
-LoadingSub.TextColor3 = C_DIM
-LoadingSub.TextSize = 13
-LoadingSub.Font = Enum.Font.Gotham
-LoadingSub.Parent = LoadingBg
+local aimbotEnabled, aimbotFOV = false, 90
+local aimbotSmoothness = 5
+local aimbotSelectedTarget = nil
+local fovCircleVisible = true
+local silentAimEnabled = false
+local autoShootEnabled = false
+local silentAimWallcheck = true
+local aimPart = "Head" -- Head / HumanoidRootPart / UpperTorso / Random
 
-local LoadingBarBg = Instance.new("Frame")
-LoadingBarBg.Size = UDim2.new(0, 320, 0, 4)
-LoadingBarBg.Position = UDim2.new(0.5, -160, 0.5, 30)
-LoadingBarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-LoadingBarBg.BorderSizePixel = 0
-LoadingBarBg.Parent = LoadingBg
-addCorner(LoadingBarBg, 2)
+local hitboxEnabled, hitboxSize = false, 5
+local autoClickerEnabled, autoClickerDelay = false, 100
+local triggerbotEnabled = false
+local chatSpamEnabled, chatSpamDelay = false, 5
+local chatSpamMessage = "WIA HUB ON TOP"
 
-local LoadingBar = Instance.new("Frame")
-LoadingBar.Size = UDim2.new(0, 0, 1, 0)
-LoadingBar.BackgroundColor3 = C_ACCENT
-LoadingBar.BorderSizePixel = 0
-LoadingBar.Parent = LoadingBarBg
-addCorner(LoadingBar, 2)
+local espBoxEnabled, espTracerEnabled = true, true
+local espNamesEnabled, espDistanceEnabled = true, true
+local espHealthEnabled, skeletonEnabled = true, false
+local skeletonColor = C_ACCENT
+local espColor = C_ACCENT
+local itemEspEnabled = false
+local teamCheckEnabled = true
+local espItems = {}
 
-local LoadingStatus = Instance.new("TextLabel")
-LoadingStatus.Size = UDim2.new(0, 400, 0, 20)
-LoadingStatus.Position = UDim2.new(0.5, -200, 0.5, 46)
-LoadingStatus.BackgroundTransparency = 1
-LoadingStatus.Text = "0%"
-LoadingStatus.TextColor3 = C_DIM
-LoadingStatus.TextSize = 12
-LoadingStatus.Font = Enum.Font.Gotham
-LoadingStatus.Parent = LoadingBg
+local dashEnabled, dashPower = false, 90
+local dashKey = Enum.KeyCode.Q
+local dashCooldown, dashLastUsed = 0.4, 0
 
-task.spawn(function()
-    local steps = {
-        { pct = 25, t = 0.35, msg = "инициализация..." },
-        { pct = 55, t = 0.35, msg = "загрузка модулей..." },
-        { pct = 85, t = 0.35, msg = "сборка интерфейса..." },
-        { pct = 100, t = 0.4, msg = "готово" },
-    }
-    for _, s in ipairs(steps) do
-        TweenService:Create(LoadingBar, TweenInfo.new(s.t, Enum.EasingStyle.Quad), {
-            Size = UDim2.new(s.pct / 100, 0, 1, 0),
-        }):Play()
-        LoadingStatus.Text = s.msg .. "  " .. s.pct .. "%"
-        task.wait(s.t)
+local hubToggleKey = Enum.KeyCode.RightShift
+local guiVisible = true
+local waitingHubBind = false
+
+local headlessEnabled, korbloxEnabled = false, false
+local currentAnimPack = "Default"
+
+-- ========== ANIMATION LIBRARY ==========
+-- Bundle ID / Asset ID подход. Для простоты используем прямые ID анимаций (R15).
+-- Если анимация не грузится — игра может её блокировать, это нормально.
+local ANIM_PACKS = {
+    Default = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Zombie = {
+        idle = "rbxassetid://616158929", -- были данные 616158929/616157476
+        walk = "rbxassetid://616158929",
+        run = "rbxassetid://616158929",
+        jump = "rbxassetid://616158929",
+        fall = "rbxassetid://616158929",
+        climb = "rbxassetid://616158929",
+        swim = "rbxassetid://616158929",
+        swimidle = "rbxassetid://616158929",
+    },
+    Vampire = {
+        idle = "rbxassetid://1083462077",
+        walk = "rbxassetid://1083462077",
+        run = "rbxassetid://1083462077",
+        jump = "rbxassetid://1083462077",
+        fall = "rbxassetid://1083462077",
+        climb = "rbxassetid://1083462077",
+        swim = "rbxassetid://1083462077",
+        swimidle = "rbxassetid://1083462077",
+    },
+    Werewolf = {
+        idle = "rbxassetid://616158929",
+        walk = "rbxassetid://616158929",
+        run = "rbxassetid://616158929",
+        jump = "rbxassetid://616158929",
+        fall = "rbxassetid://616158929",
+        climb = "rbxassetid://616158929",
+        swim = "rbxassetid://616158929",
+        swimidle = "rbxassetid://616158929",
+    },
+    Adidas = {
+        idle = "rbxassetid://616163532",
+        walk = "rbxassetid://616165536",
+        run = "rbxassetid://616161920",
+        jump = "rbxassetid://616161920",
+        fall = "rbxassetid://616161920",
+        climb = "rbxassetid://616161920",
+        swim = "rbxassetid://616161920",
+        swimidle = "rbxassetid://616161920",
+    },
+    ["Adidas Aura"] = {
+        idle = "rbxassetid://616163532",
+        walk = "rbxassetid://616165536",
+        run = "rbxassetid://616161920",
+        jump = "rbxassetid://616161920",
+        fall = "rbxassetid://616161920",
+        climb = "rbxassetid://616161920",
+        swim = "rbxassetid://616161920",
+        swimidle = "rbxassetid://616161920",
+    },
+    Ninja = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Robot = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Levitate = {
+        idle = "rbxassetid://313762630",
+        walk = "rbxassetid://313762630",
+        run = "rbxassetid://313762630",
+        jump = "rbxassetid://313762630",
+        fall = "rbxassetid://313762630",
+        climb = "rbxassetid://313762630",
+        swim = "rbxassetid://313762630",
+        swimidle = "rbxassetid://313762630",
+    },
+    Mage = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Stylish = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Ghost = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Knight = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+    Cartoony = {
+        idle = "rbxassetid://507766666",
+        walk = "rbxassetid://507777826",
+        run = "rbxassetid://507767714",
+        jump = "rbxassetid://507765000",
+        fall = "rbxassetid://507767968",
+        climb = "rbxassetid://507765644",
+        swim = "rbxassetid://507784897",
+        swimidle = "rbxassetid://507785072",
+    },
+}
+
+local function applyAnimPack(packName)
+    local pack = ANIM_PACKS[packName]
+    if not pack then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local animate = char:FindFirstChild("Animate")
+    if not animate then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    -- Останавливаем все текущие анимации
+    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+        track:Stop()
     end
-    task.wait(0.25)
-    TweenService:Create(LoadingBg, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
-    for _, o in ipairs(LoadingBg:GetDescendants()) do
-        if o:IsA("TextLabel") then
-            TweenService:Create(o, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
-        elseif o:IsA("Frame") then
-            TweenService:Create(o, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+    -- Подменяем AnimationId
+    local function setAnim(name, id)
+        local obj = animate:FindFirstChild(name)
+        if obj and obj:IsA("Animation") then
+            obj.AnimationId = id
         end
     end
-    task.wait(0.4)
-    LoadingGui:Destroy()
-    notify("WIA HUB v10.0 загружен", "success")
-end)
+    -- R15 структура
+    local idle = animate:FindFirstChild("idle")
+    if idle then
+        setAnim("idle", pack.idle)
+        local idle2 = idle:FindFirstChild("Animation2")
+        if idle2 then idle2.AnimationId = pack.idle end
+    end
+    setAnim("walk", pack.walk)
+    setAnim("run", pack.run)
+    setAnim("jump", pack.jump)
+    setAnim("fall", pack.fall)
+    setAnim("climb", pack.climb)
+    setAnim("swim", pack.swim)
+    setAnim("swimidle", pack.swimidle)
+    -- Перезапускаем
+    humanoid:ChangeState(Enum.HumanoidStateType.Landed)
+    notify("Анимация: " .. packName, "success")
+end
 
--- ========== STATE ==========
-local flightEnabled, noclipEnabled           = false, false
-local flySpeed                               = 50
-local bodyVelocity, bodyGyro                 = nil, nil
-local savedGravity                           = workspace.Gravity
-local flyUp, flyDown                         = false, false
+-- ========== COSMETICS (Headless / Korblox) ==========
+local HEADLESS_MESH = "rbxassetid://1095708"
+local KORBLOX_MESH = "rbxassetid://101851696"
+local KORBLOX_TEXTURE = "rbxassetid://101851254"
+local KORBLOX_DARK = Color3.fromRGB(64, 64, 64)
 
-local cframeSpeedEnabled, cframeSpeedValue   = false, 2
-local walkSpeedValue, jumpPowerValue         = 16, 50
-local infiniteJumpEnabled, bhopEnabled       = false, false
-local spinbotEnabled, spinbotSpeed           = false, 20
+local function applyHeadless()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+    head.Transparency = 1
+    head.CanCollide = false
+    for _, v in pairs(head:GetChildren()) do
+        if v:IsA("Decal") then v:Destroy() end
+    end
+    local mesh = head:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", head)
+    mesh.MeshType = Enum.MeshType.FileMesh
+    mesh.MeshId = HEADLESS_MESH
+    mesh.Scale = Vector3.new(0.001, 0.001, 0.001)
+end
 
-local godmodeEnabled                         = false
-local tpToolEnabled, tpEnabled               = false, false
-local wallhackEnabled, chamsOpacity          = false, 0.35
-local antiAFKEnabled, playerListEnabled      = false, false
-local antiVoidEnabled, antiFallEnabled       = false, false
-local antiFlingEnabled, antiRagdollEnabled   = false, false
-local fullBrightEnabled, noFogEnabled        = false, false
-local originalBrightness, originalAmbient, originalFog = nil, nil, nil
+local function applyKorblox()
+    local char = LocalPlayer.Character
+    if not char then return end
+    -- R15
+    local upper = char:FindFirstChild("RightUpperLeg")
+    local lower = char:FindFirstChild("RightLowerLeg")
+    local foot = char:FindFirstChild("RightFoot")
+    if upper and lower and foot then
+        for _, p in ipairs({upper, lower, foot}) do
+            for _, c in ipairs(p:GetChildren()) do
+                if c:IsA("SpecialMesh") or c:IsA("CharacterMesh") then c:Destroy() end
+            end
+        end
+        upper.MeshId = KORBLOX_MESH
+        upper.TextureID = KORBLOX_TEXTURE
+        lower.Transparency = 1
+        foot.Transparency = 1
+        upper.Color = KORBLOX_DARK
+        return
+    end
+    -- R6
+    local rightLeg = char:FindFirstChild("Right Leg")
+    if rightLeg then
+        for _, c in ipairs(rightLeg:GetChildren()) do
+            if c:IsA("SpecialMesh") or c:IsA("CharacterMesh") then c:Destroy() end
+        end
+        local mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.MeshId = KORBLOX_MESH
+        mesh.TextureId = KORBLOX_TEXTURE
+        mesh.Parent = rightLeg
+        rightLeg.Color = KORBLOX_DARK
+    end
+end
 
-local aimbotEnabled, aimbotFOV               = false, 90
-local aimbotSmoothness                       = 5
-local aimbotSelectedTarget                   = nil
-local fovCircleVisible                       = true
-local silentAimEnabled                       = false
-
-local hitboxEnabled, hitboxSize              = false, 5
-local autoClickerEnabled, autoClickerDelay   = false, 100
-local triggerbotEnabled                      = false
-local chatSpamEnabled, chatSpamDelay         = false, 5
-local chatSpamMessage                        = "WIA HUB ON TOP"
-
-local espBoxEnabled, espTracerEnabled        = true, true
-local espNamesEnabled, espDistanceEnabled    = true, true
-local espHealthEnabled, skeletonEnabled      = true, false
-local skeletonColor                          = Color3.fromRGB(124, 92, 255)
-
-local dashEnabled, dashPower                 = false, 90
-local dashKey                                = Enum.KeyCode.Q
-local dashCooldown, dashLastUsed             = 0.4, 0
-
-local hubToggleKey                           = Enum.KeyCode.RightShift
-local guiVisible                             = true
-local waitingHubBind                         = false
-
--- Drawing FOV circle
-local fovCircle
-if Drawing then
-    fovCircle = Drawing.new("Circle")
-    fovCircle.Thickness = 1.5
-    fovCircle.NumSides = 60
-    fovCircle.Radius = aimbotFOV
-    fovCircle.Filled = false
-    fovCircle.Visible = false
-    fovCircle.Color = C_ACCENT
+local function removeCosmetics()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if head then
+        head.Transparency = 0
+        local m = head:FindFirstChildOfClass("SpecialMesh")
+        if m and m.MeshId == HEADLESS_MESH then m:Destroy() end
+    end
+    for _, name in ipairs({"RightUpperLeg", "RightLowerLeg", "RightFoot", "Right Leg"}) do
+        local p = char:FindFirstChild(name)
+        if p then
+            for _, c in ipairs(p:GetChildren()) do
+                if c:IsA("SpecialMesh") and c.MeshId == KORBLOX_MESH then c:Destroy() end
+            end
+        end
+    end
 end
 
 -- ========== WATERMARK ==========
-local WatermarkGui = Instance.new("ScreenGui")
-WatermarkGui.Name = "WiaWm_v10"
-WatermarkGui.ResetOnSpawn = false
-WatermarkGui.DisplayOrder = 50
-WatermarkGui.Parent = CoreGui
+local WmGui = Instance.new("ScreenGui")
+WmGui.Name = "WiaWm"
+WmGui.ResetOnSpawn = false
+WmGui.DisplayOrder = 50
+WmGui.Parent = CoreGui
 
-local Watermark = Instance.new("Frame")
-Watermark.Size = UDim2.new(0, 250, 0, 44)
-Watermark.Position = UDim2.new(0, 12, 0, 12)
-Watermark.BackgroundColor3 = C_PANEL
-Watermark.BackgroundTransparency = 0.15
-Watermark.BorderSizePixel = 0
-Watermark.Parent = WatermarkGui
-addCorner(Watermark, 10)
+local Wm = Instance.new("Frame")
+Wm.Size = UDim2.new(0, 250, 0, 44)
+Wm.Position = UDim2.new(0, 12, 0, 12)
+Wm.BackgroundColor3 = C_PANEL
+Wm.BackgroundTransparency = 0.15
+Wm.BorderSizePixel = 0
+Wm.Parent = WmGui
+addCorner(Wm, 10)
 
-local wmStroke = Instance.new("UIStroke")
-wmStroke.Color = C_STROKE
-wmStroke.Thickness = 1
-wmStroke.Transparency = 0.3
-wmStroke.Parent = Watermark
+local WmStroke = Instance.new("UIStroke")
+WmStroke.Color = C_STROKE
+WmStroke.Thickness = 1
+WmStroke.Transparency = 0.3
+WmStroke.Parent = Wm
 
-local wmAccent = Instance.new("Frame")
-wmAccent.Size = UDim2.new(0, 3, 1, 0)
-wmAccent.BackgroundColor3 = C_ACCENT
-wmAccent.BorderSizePixel = 0
-wmAccent.Parent = Watermark
-addCorner(wmAccent, 2)
+local WmAccent = Instance.new("Frame")
+WmAccent.Size = UDim2.new(0, 3, 1, 0)
+WmAccent.BackgroundColor3 = C_ACCENT
+WmAccent.BorderSizePixel = 0
+WmAccent.Parent = Wm
+addCorner(WmAccent, 2)
 
-local wmTitle = Instance.new("TextLabel")
-wmTitle.Size = UDim2.new(1, -20, 0, 20)
-wmTitle.Position = UDim2.new(0, 14, 0, 4)
-wmTitle.BackgroundTransparency = 1
-wmTitle.Text = "WIA HUB v10.0"
-wmTitle.TextColor3 = C_TEXT
-wmTitle.TextSize = 13
-wmTitle.Font = Enum.Font.GothamBold
-wmTitle.TextXAlignment = Enum.TextXAlignment.Left
-wmTitle.Parent = Watermark
+local WmTitle = Instance.new("TextLabel")
+WmTitle.Size = UDim2.new(1, -20, 0, 20)
+WmTitle.Position = UDim2.new(0, 14, 0, 4)
+WmTitle.BackgroundTransparency = 1
+WmTitle.Text = "WIA HUB v11.0"
+WmTitle.TextColor3 = C_TEXT
+WmTitle.TextSize = 13
+WmTitle.Font = Enum.Font.GothamBold
+WmTitle.TextXAlignment = Enum.TextXAlignment.Left
+WmTitle.Parent = Wm
 
-local wmStats = Instance.new("TextLabel")
-wmStats.Size = UDim2.new(1, -20, 0, 16)
-wmStats.Position = UDim2.new(0, 14, 0, 23)
-wmStats.BackgroundTransparency = 1
-wmStats.Text = "60 FPS  ·  0 ms  ·  " .. LocalPlayer.Name
-wmStats.TextColor3 = C_DIM
-wmStats.TextSize = 11
-wmStats.Font = Enum.Font.Gotham
-wmStats.TextXAlignment = Enum.TextXAlignment.Left
-wmStats.Parent = Watermark
+local WmStats = Instance.new("TextLabel")
+WmStats.Size = UDim2.new(1, -20, 0, 16)
+WmStats.Position = UDim2.new(0, 14, 0, 23)
+WmStats.BackgroundTransparency = 1
+WmStats.Text = "60 FPS  ·  0 ms  ·  " .. LocalPlayer.Name
+WmStats.TextColor3 = C_DIM
+WmStats.TextSize = 11
+WmStats.Font = Enum.Font.Gotham
+WmStats.TextXAlignment = Enum.TextXAlignment.Left
+WmStats.Parent = Wm
 
 local frameCount, fps = 0, 0
 task.spawn(function()
-    while Watermark.Parent do
+    while Wm.Parent do
         frameCount = 0
         task.wait(1)
         fps = frameCount
@@ -313,28 +484,26 @@ end)
 RunService.RenderStepped:Connect(function() frameCount = frameCount + 1 end)
 
 task.spawn(function()
-    while Watermark.Parent do
+    while Wm.Parent do
         local ok, ping = pcall(function()
             return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
         end)
-        wmStats.Text = string.format("%d FPS  ·  %d ms  ·  %s",
-            fps, ok and ping or 0, LocalPlayer.Name)
+        WmStats.Text = string.format("%d FPS  ·  %d ms  ·  %s", fps, ok and ping or 0, LocalPlayer.Name)
         task.wait(0.5)
     end
 end)
 
--- ========== PLAYER LIST GUI ==========
+-- ========== PLAYER LIST ==========
 local playerListTumbler
-
 local PlayerListGui = Instance.new("ScreenGui")
-PlayerListGui.Name = "WiaPlayerList_v10"
+PlayerListGui.Name = "WiaPlayerList"
 PlayerListGui.ResetOnSpawn = false
 PlayerListGui.Parent = CoreGui
 PlayerListGui.Enabled = false
 
-local plViewport = workspace.CurrentCamera.ViewportSize
-local plW = math.clamp(plViewport.X * 0.5, 240, 320)
-local plH = math.clamp(plViewport.Y - 80, 200, 400)
+local plV = workspace.CurrentCamera.ViewportSize
+local plW = math.clamp(plV.X * 0.5, 240, 320)
+local plH = math.clamp(plV.Y - 80, 200, 400)
 
 local PlayerListMain = Instance.new("Frame")
 PlayerListMain.Size = UDim2.new(0, plW, 0, plH)
@@ -378,30 +547,30 @@ PlayerListClose.MouseButton1Click:Connect(function()
     if playerListTumbler then playerListTumbler.setState(false) else PlayerListGui.Enabled = false end
 end)
 
-local playerListScrollingFrame = Instance.new("ScrollingFrame")
-playerListScrollingFrame.Size = UDim2.new(1, -8, 1, -84)
-playerListScrollingFrame.Position = UDim2.new(0, 4, 0, 38)
-playerListScrollingFrame.BackgroundTransparency = 1
-playerListScrollingFrame.BorderSizePixel = 0
-playerListScrollingFrame.ScrollBarThickness = 3
-playerListScrollingFrame.ScrollBarImageColor3 = C_ACCENT
-playerListScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-playerListScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-playerListScrollingFrame.Parent = PlayerListMain
+local plScroll = Instance.new("ScrollingFrame")
+plScroll.Size = UDim2.new(1, -8, 1, -84)
+plScroll.Position = UDim2.new(0, 4, 0, 38)
+plScroll.BackgroundTransparency = 1
+plScroll.BorderSizePixel = 0
+plScroll.ScrollBarThickness = 3
+plScroll.ScrollBarImageColor3 = C_ACCENT
+plScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+plScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+plScroll.Parent = PlayerListMain
 
 local plLayout = Instance.new("UIListLayout")
 plLayout.Padding = UDim.new(0, 6)
 plLayout.SortOrder = Enum.SortOrder.LayoutOrder
-plLayout.Parent = playerListScrollingFrame
+plLayout.Parent = plScroll
 
 local plPad = Instance.new("UIPadding")
 plPad.PaddingLeft = UDim.new(0, 4)
 plPad.PaddingRight = UDim.new(0, 6)
 plPad.PaddingTop = UDim.new(0, 2)
 plPad.PaddingBottom = UDim.new(0, 6)
-plPad.Parent = playerListScrollingFrame
+plPad.Parent = plScroll
 
-local PlayerListContainer = playerListScrollingFrame
+local PlayerListContainer = plScroll
 
 local TargetStatus = Instance.new("TextLabel")
 TargetStatus.Size = UDim2.new(1, -96, 0, 36)
@@ -427,7 +596,7 @@ ResetTargetBtn.BorderSizePixel = 0
 ResetTargetBtn.Parent = PlayerListMain
 addCorner(ResetTargetBtn, 8)
 
--- ========== DRAG ==========
+-- ========== DRAGGABLE ==========
 local function makeDraggable(frame, handle)
     handle = handle or frame
     local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
@@ -449,20 +618,17 @@ local function makeDraggable(frame, handle)
     UserInputService.InputChanged:Connect(function(input)
         if dragging and input == dragInput then
             local d = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + d.X,
-                startPos.Y.Scale, startPos.Y.Offset + d.Y
-            )
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
         end
     end)
 end
 
 -- ========== MAIN GUI ==========
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WiaHubGUI_v10"
+ScreenGui.Name = "WiaHubGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
-ScreenGui.Enabled = false
+ScreenGui.Enabled = true
 
 local vp0 = Camera.ViewportSize
 local menuW = math.clamp(vp0.X - 20, 250, 330)
@@ -498,7 +664,7 @@ Title.Parent = MainFrame
 local TitleVer = Instance.new("TextLabel")
 TitleVer.Size = UDim2.new(0, 40, 0, 34)
 TitleVer.Position = UDim2.new(0, 76, 0, 0)
-TitleVer.Text = "v10"
+TitleVer.Text = "v11"
 TitleVer.TextColor3 = C_DIM
 TitleVer.TextSize = 11
 TitleVer.TextXAlignment = Enum.TextXAlignment.Left
@@ -651,9 +817,9 @@ end)
 makeDraggable(MainFrame, Title)
 makeDraggable(PlayerListMain, PlayerListTitle)
 
--- ========== TOGGLE ==========
+-- ========== TOGGLE BUTTON ==========
 local ToggleGui = Instance.new("ScreenGui")
-ToggleGui.Name = "WiaToggle_v10"
+ToggleGui.Name = "WiaToggle"
 ToggleGui.ResetOnSpawn = false
 ToggleGui.Parent = CoreGui
 
@@ -680,14 +846,12 @@ makeDraggable(ToggleBtn)
 
 local pressPos
 ToggleBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         pressPos = input.Position
     end
 end)
 ToggleBtn.InputEnded:Connect(function(input)
-    if pressPos and (input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1) then
+    if pressPos and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
         if (input.Position - pressPos).Magnitude < 8 then
             guiVisible = not guiVisible
             ScreenGui.Enabled = guiVisible
@@ -699,7 +863,7 @@ end)
 
 -- ========== FLY BUTTONS ==========
 local FlyGui = Instance.new("ScreenGui")
-FlyGui.Name = "WiaFly_v10"
+FlyGui.Name = "WiaFly"
 FlyGui.ResetOnSpawn = false
 FlyGui.Enabled = false
 FlyGui.Parent = CoreGui
@@ -718,8 +882,7 @@ local function makeFlyButton(text, position, setHeld)
     b.Parent = FlyGui
     addCorner(b, 26)
     b.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch
-        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             setHeld(true)
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then setHeld(false) end
@@ -727,8 +890,7 @@ local function makeFlyButton(text, position, setHeld)
         end
     end)
     b.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch
-        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             setHeld(false)
         end
     end)
@@ -739,6 +901,13 @@ makeFlyButton("▲", UDim2.new(1, -74, 0.5, -66), function(v) flyUp = v end)
 makeFlyButton("▼", UDim2.new(1, -74, 0.5, 0), function(v) flyDown = v end)
 
 -- ========== UI FACTORY ==========
+local allElements = {}
+local searchBarRef = nil
+
+local function registerElement(el)
+    table.insert(allElements, el)
+end
+
 local function createSection(text)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 18)
@@ -749,6 +918,7 @@ local function createSection(text)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.BackgroundTransparency = 1
     lbl.Parent = currentPage
+    registerElement({ obj = lbl, name = text, type = "section" })
     return lbl
 end
 
@@ -877,17 +1047,18 @@ local function createTumbler(labelText, defaultState, opts)
         end)
     end
 
-    return {
+    local obj = {
         getState = function() return state end,
         setState = function(n) state = n update() event:Fire(n) end,
         onToggle = function(cb) event.Event:Connect(cb) end,
     }
+    registerElement({ obj = row, name = labelText, type = "tumbler" })
+    return obj
 end
 
 local activeSlider = nil
 UserInputService.InputChanged:Connect(function(input)
-    if activeSlider and (input == activeSlider.input
-    or input.UserInputType == Enum.UserInputType.MouseMovement) then
+    if activeSlider and (input == activeSlider.input or input.UserInputType == Enum.UserInputType.MouseMovement) then
         activeSlider.apply(input.Position.X)
     end
 end)
@@ -974,8 +1145,7 @@ local function createSlider(labelText, minVal, maxVal, defaultVal, callback)
     end
 
     hit.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             activeSlider = { apply = applyFromX, input = input }
             page.ScrollingEnabled = false
             applyFromX(input.Position.X)
@@ -998,6 +1168,7 @@ local function createSlider(labelText, minVal, maxVal, defaultVal, callback)
         end
     end)
 
+    registerElement({ obj = row, name = labelText, type = "slider" })
     return { setValue = function(v) value = v setVisual(v) end }
 end
 
@@ -1022,10 +1193,80 @@ local function createButton(labelText, callback)
         TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = 1 }):Play()
     end)
     btn.MouseButton1Click:Connect(callback)
+    registerElement({ obj = btn, name = labelText, type = "button" })
     return btn
 end
 
--- ========== FLIGHT (stable) ==========
+-- ========== SEARCH BAR ==========
+local function createSearchBar()
+    local searchFrame = Instance.new("Frame")
+    searchFrame.Size = UDim2.new(1, -24, 0, 32)
+    searchFrame.Position = UDim2.new(0, 12, 0, 74)
+    searchFrame.BackgroundColor3 = C_ROW
+    searchFrame.BorderSizePixel = 0
+    searchFrame.ZIndex = 10
+    searchFrame.Parent = MainFrame
+    addCorner(searchFrame, 8)
+
+    local searchBox = Instance.new("TextBox")
+    searchBox.Size = UDim2.new(1, -44, 1, 0)
+    searchBox.Position = UDim2.new(0, 12, 0, 0)
+    searchBox.BackgroundTransparency = 1
+    searchBox.Text = ""
+    searchBox.PlaceholderText = "Поиск функций..."
+    searchBox.TextColor3 = C_TEXT
+    searchBox.PlaceholderColor3 = C_DIM
+    searchBox.TextSize = 12
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    searchBox.ClearTextOnFocus = false
+    searchBox.Parent = searchFrame
+
+    local clearBtn = Instance.new("TextButton")
+    clearBtn.Size = UDim2.new(0, 24, 0, 24)
+    clearBtn.Position = UDim2.new(1, -32, 0, 4)
+    clearBtn.Text = "✕"
+    clearBtn.TextColor3 = C_DIM
+    clearBtn.BackgroundColor3 = C_ROW_D
+    clearBtn.TextSize = 12
+    clearBtn.Font = Enum.Font.GothamBold
+    clearBtn.BorderSizePixel = 0
+    clearBtn.Parent = searchFrame
+    addCorner(clearBtn, 6)
+
+    clearBtn.MouseButton1Click:Connect(function()
+        searchBox.Text = ""
+        for _, el in ipairs(allElements) do
+            if el.obj and el.obj.Parent then
+                el.obj.Visible = true
+            end
+        end
+    end)
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local query = searchBox.Text:lower()
+        if query == "" then
+            for _, el in ipairs(allElements) do
+                if el.obj and el.obj.Parent then el.obj.Visible = true end
+            end
+            return
+        end
+        for _, el in ipairs(allElements) do
+            if el.obj and el.obj.Parent and el.name then
+                local match = el.name:lower():find(query, 1, true)
+                el.obj.Visible = match ~= nil
+            end
+        end
+    end)
+
+    PageHolder.Position = UDim2.new(0, 0, 0, 112)
+    PageHolder.Size = UDim2.new(1, 0, 1, -136)
+    searchBarRef = searchBox
+end
+
+createSearchBar()
+
+-- ========== FLIGHT ==========
 local function stopFlight()
     if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
     if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
@@ -1044,7 +1285,6 @@ local function startFlight()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not (root and hum) then return end
-
     savedGravity = workspace.Gravity
     workspace.Gravity = 0
     hum.PlatformStand = true
@@ -1178,7 +1418,8 @@ local function loadF3X()
     return false
 end
 
--- ========== SILENT AIM (namecall hook) ==========
+-- ========== SILENT AIM (fixed) ==========
+local silentAimHook = nil
 if hookmetamethod and getnamecallmethod then
     local ok = pcall(function()
         local old
@@ -1190,7 +1431,7 @@ if hookmetamethod and getnamecallmethod then
                     local minDist = aimbotFOV
                     for _, p in pairs(Players:GetPlayers()) do
                         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                            local s, onScreen = Camera:WorldToScreenPoint(p.Character.Head.Position)
+                            local s, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
                             if onScreen then
                                 local d = (Vector2.new(s.X, s.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
                                 if d < minDist then minDist = d target = p end
@@ -1199,14 +1440,23 @@ if hookmetamethod and getnamecallmethod then
                     end
                 end
                 if target and target.Character then
-                    local tp = target.Character:FindFirstChild("Head")
-                        or target.Character:FindFirstChild("HumanoidRootPart")
-                    if tp then
+                    local aimPartObj = target.Character:FindFirstChild(aimPart) or target.Character:FindFirstChild("Head")
+                    if aimPartObj then
+                        -- Wallcheck
+                        if silentAimWallcheck then
+                            local origin = Camera.CFrame.Position
+                            local dir = (aimPartObj.Position - origin)
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {LocalPlayer.Character, target.Character}
+                            params.FilterType = Enum.RaycastFilterType.Exclude
+                            local result = workspace:Raycast(origin, dir, params)
+                            if result then return old(self, ...) end
+                        end
                         local args = {...}
                         local mod = false
                         for i = 1, #args do
                             if typeof(args[i]) == "CFrame" then
-                                args[i] = CFrame.new(args[i].Position, tp.Position)
+                                args[i] = CFrame.new(args[i].Position, aimPartObj.Position)
                                 mod = true
                             end
                         end
@@ -1303,8 +1553,8 @@ updatePlayerList = function()
             nm.Parent = row
 
             local tpBtn = makeRowButton(row, "TP", -112, C_ROW_D)
-            local aimBtn = makeRowButton(row, sel and "✓" or "AIM", -58,
-                sel and Color3.fromRGB(30, 100, 65) or C_ROW_D)
+            local aimBtn = makeRowButton(row, sel and "✓" or "AIM", -58, sel and Color3.fromRGB(30, 100, 65) or C_ROW_D)
+            local specBtn = makeRowButton(row, "SP", -166, C_ROW_D)
 
             tpBtn.MouseButton1Click:Connect(function()
                 local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1314,10 +1564,13 @@ updatePlayerList = function()
                     notify("TP к " .. plr.Name, "success")
                 end
             end)
-
             aimBtn.MouseButton1Click:Connect(function()
                 setAimTarget(aimbotSelectedTarget == plr and nil or plr)
                 updatePlayerList()
+            end)
+            specBtn.MouseButton1Click:Connect(function()
+                spectateTarget = plr
+                notify("Спектатор: " .. plr.Name, "success")
             end)
         end
     end
@@ -1328,21 +1581,22 @@ Players.PlayerAdded:Connect(function()
 end)
 Players.PlayerRemoving:Connect(function(plr)
     if aimbotSelectedTarget == plr then setAimTarget(nil) end
+    if spectateTarget == plr then spectateTarget = nil end
     task.defer(function()
         if playerListEnabled then updatePlayerList() end
     end)
 end)
 
--- ========== AIMBOT ==========
+-- ========== AIMBOT / AUTO-SHOOT ==========
 local function getAimbotTarget()
-    if aimbotSelectedTarget and aimbotSelectedTarget.Character
-    and aimbotSelectedTarget.Character:FindFirstChild("Head") then
+    if aimbotSelectedTarget and aimbotSelectedTarget.Character and aimbotSelectedTarget.Character:FindFirstChild("Head") then
         return aimbotSelectedTarget
     end
     local closest, minDist = nil, aimbotFOV
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
-            local s, onScreen = Camera:WorldToScreenPoint(plr.Character.Head.Position)
+            if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
+            local s, onScreen = Camera:WorldToViewportPoint(plr.Character.Head.Position)
             if onScreen then
                 local d = (Vector2.new(s.X, s.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
                 if d < minDist then minDist = d closest = plr end
@@ -1350,6 +1604,14 @@ local function getAimbotTarget()
         end
     end
     return closest
+end
+
+local function getAimPart(character)
+    if aimPart == "Random" then
+        local parts = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}
+        return character:FindFirstChild(parts[math.random(1, #parts)])
+    end
+    return character:FindFirstChild(aimPart) or character:FindFirstChild("Head")
 end
 
 RunService.RenderStepped:Connect(function()
@@ -1360,13 +1622,47 @@ RunService.RenderStepped:Connect(function()
     end
     if aimbotEnabled then
         local t = getAimbotTarget()
-        if t and t.Character and t.Character:FindFirstChild("Head") then
-            local cur = Camera.CFrame
-            local new = CFrame.new(cur.Position, t.Character.Head.Position)
-            if aimbotSmoothness > 1 then
-                Camera.CFrame = cur:Lerp(new, 1 / aimbotSmoothness)
+        if t and t.Character then
+            local ap = getAimPart(t.Character)
+            if ap then
+                if silentAimWallcheck then
+                    local origin = Camera.CFrame.Position
+                    local dir = ap.Position - origin
+                    local params = RaycastParams.new()
+                    params.FilterDescendantsInstances = {LocalPlayer.Character, t.Character}
+                    params.FilterType = Enum.RaycastFilterType.Exclude
+                    local result = workspace:Raycast(origin, dir, params)
+                    if result then return end
+                end
+                local cur = Camera.CFrame
+                local new = CFrame.new(cur.Position, ap.Position)
+                if aimbotSmoothness > 1 then
+                    Camera.CFrame = cur:Lerp(new, 1 / aimbotSmoothness)
+                else
+                    Camera.CFrame = new
+                end
+            end
+        end
+    end
+end)
+
+-- AutoShoot
+RunService.RenderStepped:Connect(function()
+    if not autoShootEnabled then return end
+    local t = getAimbotTarget()
+    if t and t.Character then
+        local ap = getAimPart(t.Character)
+        if ap then
+            if silentAimWallcheck then
+                local origin = Camera.CFrame.Position
+                local dir = ap.Position - origin
+                local params = RaycastParams.new()
+                params.FilterDescendantsInstances = {LocalPlayer.Character, t.Character}
+                params.FilterType = Enum.RaycastFilterType.Exclude
+                local result = workspace:Raycast(origin, dir, params)
+                if not result and mouse1click then pcall(mouse1click) end
             else
-                Camera.CFrame = new
+                if mouse1click then pcall(mouse1click) end
             end
         end
     end
@@ -1382,6 +1678,226 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ========== ESP / SKELETON (fixed with pool) ==========
+local skelPool = {}
+local skelActive = 0
+local espPool = {}
+local espActive = 0
+local textPool = {}
+local textActive = 0
+
+local function getLine(pool, index)
+    if not pool[index] then
+        pool[index] = Drawing.new("Line")
+    end
+    pool[index].Visible = true
+    return pool[index]
+end
+
+local function getText(pool, index)
+    if not pool[index] then
+        pool[index] = Drawing.new("Text")
+        pool[index].Size = 12
+        pool[index].Center = true
+        pool[index].Outline = true
+    end
+    pool[index].Visible = true
+    return pool[index]
+end
+
+local function hideAll(pool, active)
+    for i = 1, #pool do
+        pool[i].Visible = false
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not Drawing then return end
+
+    -- Skeleton
+    if skeletonEnabled then
+        local idx = 0
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
+                for _, joint in pairs(plr.Character:GetDescendants()) do
+                    if joint:IsA("Motor6D") and joint.Part0 and joint.Part1 then
+                        local p0 = Camera:WorldToViewportPoint(joint.Part0.Position)
+                        local p1 = Camera:WorldToViewportPoint(joint.Part1.Position)
+                        if p0.Z > 0 and p1.Z > 0 then
+                            idx = idx + 1
+                            local line = getLine(skelPool, idx)
+                            line.From = Vector2.new(p0.X, p0.Y)
+                            line.To = Vector2.new(p1.X, p1.Y)
+                            line.Color = skeletonColor
+                            line.Thickness = 1
+                            line.Transparency = 0.9
+                        end
+                    end
+                end
+            end
+        end
+        for i = idx + 1, #skelPool do skelPool[i].Visible = false end
+    else
+        for i = 1, #skelPool do skelPool[i].Visible = false end
+    end
+
+    -- ESP / Text
+    local eIdx = 0
+    local tIdx = 0
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
+            local head = plr.Character:FindFirstChild("Head")
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if head and hum then
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
+                    local size = math.clamp(100 / math.max(dist, 1) * 10, 15, 45)
+
+                    if espBoxEnabled then
+                        local x, y = pos.X - size / 2, pos.Y - size / 2
+                        local corners = {
+                            {Vector2.new(x, y), Vector2.new(x + size, y)},
+                            {Vector2.new(x + size, y), Vector2.new(x + size, y + size)},
+                            {Vector2.new(x + size, y + size), Vector2.new(x, y + size)},
+                            {Vector2.new(x, y + size), Vector2.new(x, y)},
+                        }
+                        for _, c in ipairs(corners) do
+                            eIdx = eIdx + 1
+                            local line = getLine(espPool, eIdx)
+                            line.From = c[1]
+                            line.To = c[2]
+                            line.Color = espColor
+                            line.Thickness = 1.5
+                            line.Transparency = 1
+                        end
+                    end
+
+                    if espTracerEnabled then
+                        eIdx = eIdx + 1
+                        local line = getLine(espPool, eIdx)
+                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        line.To = Vector2.new(pos.X, pos.Y)
+                        line.Color = espColor
+                        line.Thickness = 1
+                        line.Transparency = 0.65
+                    end
+
+                    if espNamesEnabled or espDistanceEnabled then
+                        tIdx = tIdx + 1
+                        local text = getText(textPool, tIdx)
+                        text.Position = Vector2.new(pos.X, pos.Y - size / 2 - 14)
+                        text.Color = espColor
+                        local content = ""
+                        if espNamesEnabled then content = content .. plr.Name .. " " end
+                        if espHealthEnabled then content = content .. "[" .. math.floor(hum.Health) .. "HP] " end
+                        if espDistanceEnabled then content = content .. "(" .. dist .. "m)" end
+                        text.Text = content
+                    end
+                end
+            end
+        end
+    end
+    for i = eIdx + 1, #espPool do espPool[i].Visible = false end
+    for i = tIdx + 1, #textPool do textPool[i].Visible = false end
+
+    -- Item ESP
+    if itemEspEnabled then
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Tool") or obj:IsA("Model") and obj:FindFirstChildOfClass("Tool") then
+                local tool = obj:IsA("Tool") and obj or obj:FindFirstChildOfClass("Tool")
+                if tool and tool.Parent then
+                    local handle = tool:FindFirstChild("Handle")
+                    if handle then
+                        local pos, onScreen = Camera:WorldToViewportPoint(handle.Position)
+                        if onScreen then
+                            tIdx = tIdx + 1
+                            local text = getText(textPool, tIdx)
+                            text.Position = Vector2.new(pos.X, pos.Y)
+                            text.Color = Color3.fromRGB(255, 215, 0)
+                            text.Text = tool.Name
+                        end
+                    end
+                end
+            end
+        end
+        for i = tIdx + 1, #textPool do textPool[i].Visible = false end
+    end
+end)
+
+-- ========== CHAMS ==========
+RunService.Heartbeat:Connect(function()
+    if wallhackEnabled then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
+                if not plr.Character:FindFirstChild("WIA_WH") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "WIA_WH"
+                    hl.FillColor = C_ACCENT
+                    hl.FillTransparency = chamsOpacity
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Parent = plr.Character
+                else
+                    plr.Character.WIA_WH.FillTransparency = chamsOpacity
+                end
+            end
+        end
+    end
+end)
+
+-- ========== FREECAM ==========
+local freecamConnection = nil
+local freecamSpeed = 50
+local function toggleFreecam(st)
+    freecamEnabled = st
+    if st then
+        local camera = workspace.CurrentCamera
+        camera.CameraType = Enum.CameraType.Scriptable
+        local cf = camera.CFrame
+        local yaw, pitch = 0, 0
+        freecamConnection = RunService.RenderStepped:Connect(function(dt)
+            if not freecamEnabled then return end
+            local move = Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.yAxis end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.yAxis end
+            if move.Magnitude > 0 then
+                cf = cf + move.Unit * freecamSpeed * dt
+            end
+            -- Мышь
+            local delta = UserInputService:GetMouseDelta()
+            yaw = yaw - delta.X * 0.003
+            pitch = math.clamp(pitch - delta.Y * 0.003, -math.pi/2, math.pi/2)
+            camera.CFrame = CFrame.new(cf.Position) * CFrame.Angles(pitch, yaw, 0)
+        end)
+        notify("Freecam ON (WASD + Space/Shift)", "success")
+    else
+        if freecamConnection then freecamConnection:Disconnect() freecamConnection = nil end
+        workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+        notify("Freecam OFF")
+    end
+end
+
+-- ========== SPECTATE ==========
+RunService.RenderStepped:Connect(function()
+    if spectateTarget and spectateTarget.Character then
+        local targetHead = spectateTarget.Character:FindFirstChild("Head")
+        if targetHead then
+            Camera.CameraType = Enum.CameraType.Scriptable
+            Camera.CFrame = CFrame.new(targetHead.Position - targetHead.CFrame.LookVector * 10 + Vector3.new(0, 5, 0), targetHead.Position)
+        end
+    elseif Camera.CameraType == Enum.CameraType.Scriptable and not freecamEnabled then
+        Camera.CameraType = Enum.CameraType.Custom
+    end
+end)
+
 -- ========== TAB: COMBAT ==========
 createTab("Combat")
 createSection("Aimbot")
@@ -1393,9 +1909,21 @@ createTumbler("Silent Aim", false).onToggle(function(st)
     silentAimEnabled = st
     notify(st and "Silent Aim ON" or "Silent Aim OFF", st and "success" or nil)
 end)
+createTumbler("Wallcheck", true).onToggle(function(st) silentAimWallcheck = st end)
+createTumbler("AutoShoot", false).onToggle(function(st) autoShootEnabled = st end)
 createTumbler("FOV Circle", true).onToggle(function(st) fovCircleVisible = st end)
 createSlider("Aimbot FOV", 10, 400, 90, function(v) aimbotFOV = v end)
 createSlider("Aimbot Smooth", 1, 20, 5, function(v) aimbotSmoothness = v end)
+createSection("Aim Part")
+createTumbler("Head", true, { bindable = false }).onToggle(function(st)
+    if st then aimPart = "Head" end
+end)
+createTumbler("Torso", false, { bindable = false }).onToggle(function(st)
+    if st then aimPart = "HumanoidRootPart" end
+end)
+createTumbler("Random", false, { bindable = false }).onToggle(function(st)
+    if st then aimPart = "Random" end
+end)
 createTumbler("Triggerbot", false).onToggle(function(st) triggerbotEnabled = st end)
 createSection("Hitbox")
 createTumbler("Hitbox Expander", false).onToggle(function(st)
@@ -1420,6 +1948,13 @@ createTumbler("ESP Distance & HP", true).onToggle(function(st)
     espDistanceEnabled, espHealthEnabled = st, st
 end)
 createTumbler("Skeleton ESP", false).onToggle(function(st) skeletonEnabled = st end)
+createTumbler("Team Check", true).onToggle(function(st) teamCheckEnabled = st end)
+createTumbler("Item ESP", false).onToggle(function(st)
+    itemEspEnabled = st
+    if not st then
+        for _, t in pairs(textPool) do t.Visible = false end
+    end
+end)
 createSection("Chams")
 createTumbler("Chams (Wallhack)", false).onToggle(function(st)
     wallhackEnabled = st
@@ -1432,6 +1967,27 @@ createTumbler("Chams (Wallhack)", false).onToggle(function(st)
     end
 end)
 createSlider("Chams Opacity %", 0, 100, 35, function(v) chamsOpacity = v / 100 end)
+
+-- Color pickers (простые кнопки циклического перебора)
+local colors = {
+    {name = "Purple", c = Color3.fromRGB(124, 92, 255)},
+    {name = "Red", c = Color3.fromRGB(220, 80, 80)},
+    {name = "Green", c = Color3.fromRGB(80, 200, 120)},
+    {name = "Blue", c = Color3.fromRGB(80, 140, 220)},
+    {name = "Yellow", c = Color3.fromRGB(220, 200, 80)},
+    {name = "White", c = Color3.fromRGB(240, 240, 240)},
+}
+local espColorIdx, skelColorIdx = 1, 1
+createButton("ESP Color: " .. colors[espColorIdx].name, function(btn)
+    espColorIdx = espColorIdx % #colors + 1
+    espColor = colors[espColorIdx].c
+    btn.Text = "ESP Color: " .. colors[espColorIdx].name
+end)
+createButton("Skeleton Color: " .. colors[skelColorIdx].name, function(btn)
+    skelColorIdx = skelColorIdx % #colors + 1
+    skeletonColor = colors[skelColorIdx].c
+    btn.Text = "Skeleton Color: " .. colors[skelColorIdx].name
+end)
 
 -- ========== TAB: MOVE ==========
 createTab("Move")
@@ -1462,6 +2018,10 @@ createSlider("Jump Power", 50, 200, 50, function(v)
 end)
 createTumbler("Infinite Jump", false).onToggle(function(st) infiniteJumpEnabled = st end)
 createTumbler("Bhop", false).onToggle(function(st) bhopEnabled = st end)
+createTumbler("Low Gravity", false).onToggle(function(st)
+    lowGravityEnabled = st
+    workspace.Gravity = st and 50 or 196.2
+end)
 
 createSection("Dash")
 createTumbler("Dash", false).onToggle(function(st) dashEnabled = st end)
@@ -1469,7 +2029,6 @@ createSlider("Dash Power", 30, 300, 90, function(v) dashPower = v end)
 local dashBtn
 dashBtn = createButton("Dash Key: " .. dashKey.Name, function()
     if waitingHubBind then return end
-    local capture = true
     dashBtn.Text = "Нажми клавишу..."
     local c
     c = UserInputService.InputBegan:Connect(function(input, gp)
@@ -1481,6 +2040,15 @@ dashBtn = createButton("Dash Key: " .. dashKey.Name, function()
             c:Disconnect()
         end
     end)
+end)
+
+createSection("Wall Run / Freecam / Spectate")
+createTumbler("Wall Run", false).onToggle(function(st) wallRunEnabled = st end)
+createTumbler("Freecam", false).onToggle(function(st) toggleFreecam(st) end)
+createButton("Спектатор: сброс", function()
+    spectateTarget = nil
+    Camera.CameraType = Enum.CameraType.Custom
+    notify("Спектатор сброшен")
 end)
 
 createSection("Spinbot")
@@ -1498,10 +2066,7 @@ createTumbler("Godmode", false).onToggle(function(st)
 end)
 createTumbler("Anti-Void", false).onToggle(function(st) antiVoidEnabled = st end)
 createTumbler("Anti-Fall", false).onToggle(function(st) antiFallEnabled = st end)
-createTumbler("Anti-Fling", false).onToggle(function(st)
-    antiFlingEnabled = st
-    notify(st and "Anti-Fling ON" or "Anti-Fling OFF", st and "success" or nil)
-end)
+createTumbler("Anti-Fling", false).onToggle(function(st) antiFlingEnabled = st end)
 createTumbler("Anti-Ragdoll", false).onToggle(function(st) antiRagdollEnabled = st end)
 createTumbler("Anti-AFK", false).onToggle(function(st) antiAFKEnabled = st end)
 
@@ -1530,27 +2095,51 @@ createButton("Загрузить F3X Tools", function()
     if loadF3X() then notify("F3X загружен", "success") else notify("F3X: не удалось", "error") end
 end)
 
+-- ========== TAB: COSMETICS ==========
+createTab("Cosmetics")
+createSection("Аксессуары")
+createTumbler("Headless", false).onToggle(function(st)
+    headlessEnabled = st
+    if st then applyHeadless() else removeCosmetics() end
+end)
+createTumbler("Korblox", false).onToggle(function(st)
+    korbloxEnabled = st
+    if st then applyKorblox() else removeCosmetics() end
+end)
+
+createSection("Анимации")
+local animList = {
+    "Default", "Zombie", "Vampire", "Werewolf", "Adidas", "Adidas Aura",
+    "Ninja", "Robot", "Levitate", "Mage", "Stylish", "Ghost", "Knight", "Cartoony"
+}
+for _, animName in ipairs(animList) do
+    createButton("Анимация: " .. animName, function()
+        currentAnimPack = animName
+        applyAnimPack(animName)
+    end)
+end
+
 -- ========== TAB: WORLD ==========
 createTab("World")
 createSection("Lighting")
 createTumbler("FullBright", false).onToggle(function(st)
     fullBrightEnabled = st
     if st then
-        originalBrightness, originalAmbient = Lighting.Brightness, Lighting.Ambient
+        origBright, origAmbient = Lighting.Brightness, Lighting.Ambient
         Lighting.Brightness = 2
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
     else
-        if originalBrightness then Lighting.Brightness = originalBrightness end
-        if originalAmbient then Lighting.Ambient = originalAmbient end
+        if origBright then Lighting.Brightness = origBright end
+        if origAmbient then Lighting.Ambient = origAmbient end
     end
 end)
 createTumbler("No Fog", false).onToggle(function(st)
     noFogEnabled = st
     if st then
-        originalFog = Lighting.FogEnd
+        origFog = Lighting.FogEnd
         Lighting.FogEnd = 1e6
     else
-        if originalFog then Lighting.FogEnd = originalFog end
+        if origFog then Lighting.FogEnd = origFog end
     end
 end)
 createSection("Camera")
@@ -1572,7 +2161,7 @@ hubKeyBtn = createButton("Hub Key: " .. hubToggleKey.Name, function()
     notify("Нажми клавишу для открытия хаба")
 end)
 createTumbler("Watermark", true, { bindable = false }).onToggle(function(st)
-    WatermarkGui.Enabled = st
+    WmGui.Enabled = st
 end)
 
 createSection("Server")
@@ -1600,7 +2189,6 @@ selectTab("Combat")
 -- ========== GLOBAL INPUT ==========
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    -- hub bind waiting
     if waitingHubBind and input.UserInputType == Enum.UserInputType.Keyboard then
         hubToggleKey = input.KeyCode
         waitingHubBind = false
@@ -1700,8 +2288,7 @@ RunService.Heartbeat:Connect(function()
         root.AssemblyAngularVelocity = Vector3.zero
     end
     for _, c in pairs(root:GetChildren()) do
-        if (c:IsA("BodyVelocity") or c:IsA("BodyAngularVelocity")
-        or c:IsA("BodyForce") or c:IsA("BodyThrust")) and c ~= bodyVelocity then
+        if (c:IsA("BodyVelocity") or c:IsA("BodyAngularVelocity") or c:IsA("BodyForce") or c:IsA("BodyThrust")) and c ~= bodyVelocity then
             c:Destroy()
         end
     end
@@ -1712,14 +2299,32 @@ local function bindAntiRagdoll(char)
     local hum = char:WaitForChild("Humanoid", 5)
     if not hum then return end
     hum.StateChanged:Connect(function(_, new)
-        if antiRagdollEnabled and (new == Enum.HumanoidStateType.Ragdoll
-        or new == Enum.HumanoidStateType.Physics) then
+        if antiRagdollEnabled and (new == Enum.HumanoidStateType.Ragdoll or new == Enum.HumanoidStateType.Physics) then
             hum:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
     end)
 end
 if LocalPlayer.Character then bindAntiRagdoll(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiRagdoll)
+
+-- Wall Run (простая реализация: если рядом стена и идёт движение — прижимаем к стене)
+RunService.Heartbeat:Connect(function()
+    if not wallRunEnabled then return end
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not (root and hum) then return end
+    if hum.MoveDirection.Magnitude < 0.1 then return end
+    local rayOrigin = root.Position
+    local rayDir = hum.MoveDirection.Unit * 3
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {char}
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local result = workspace:Raycast(rayOrigin, rayDir, params)
+    if result then
+        root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + result.Normal * 10 + Vector3.yAxis * 20
+    end
+end)
 
 task.spawn(function()
     while true do
@@ -1755,126 +2360,5 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- ========== DRAWING ESP ==========
-local espLines, tracerLines, textDrawings, skelLines = {}, {}, {}, {}
-
-RunService.RenderStepped:Connect(function()
-    if not Drawing then return end
-    for i = #espLines, 1, -1 do espLines[i]:Remove() espLines[i] = nil end
-    for i = #tracerLines, 1, -1 do tracerLines[i]:Remove() tracerLines[i] = nil end
-    for i = #textDrawings, 1, -1 do textDrawings[i]:Remove() textDrawings[i] = nil end
-    for i = #skelLines, 1, -1 do skelLines[i]:Remove() skelLines[i] = nil end
-
-    if not (espBoxEnabled or espTracerEnabled or espNamesEnabled or espDistanceEnabled or skeletonEnabled) then return end
-
-    local camPos = Camera.CFrame.Position
-    local vp = Camera.ViewportSize
-
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head")
-        and plr.Character:FindFirstChild("Humanoid") then
-            local head = plr.Character.Head
-            local hum = plr.Character.Humanoid
-            local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-
-            -- Skeleton (не зависит от onScreen, кости могут быть за экраном но связанные)
-            if skeletonEnabled then
-                for _, joint in pairs(plr.Character:GetDescendants()) do
-                    if joint:IsA("Motor6D") and joint.Part0 and joint.Part1 then
-                        local p0 = Camera:WorldToViewportPoint(joint.Part0.Position)
-                        local p1 = Camera:WorldToViewportPoint(joint.Part1.Position)
-                        if p0.Z > 0 and p1.Z > 0 then
-                            local line = Drawing.new("Line")
-                            line.From = Vector2.new(p0.X, p0.Y)
-                            line.To = Vector2.new(p1.X, p1.Y)
-                            line.Color = skeletonColor
-                            line.Thickness = 1
-                            line.Transparency = 0.9
-                            line.Visible = true
-                            skelLines[#skelLines + 1] = line
-                        end
-                    end
-                end
-            end
-
-            if onScreen then
-                local dist = math.floor((head.Position - camPos).Magnitude)
-                local size = math.clamp(100 / math.max(dist, 1) * 10, 15, 45)
-
-                if espBoxEnabled then
-                    local L = {
-                        Drawing.new("Line"), Drawing.new("Line"),
-                        Drawing.new("Line"), Drawing.new("Line"),
-                    }
-                    local x, y = pos.X - size / 2, pos.Y - size / 2
-                    L[1].From = Vector2.new(x, y) L[1].To = Vector2.new(x + size, y)
-                    L[2].From = Vector2.new(x + size, y) L[2].To = Vector2.new(x + size, y + size)
-                    L[3].From = Vector2.new(x + size, y + size) L[3].To = Vector2.new(x, y + size)
-                    L[4].From = Vector2.new(x, y + size) L[4].To = Vector2.new(x, y)
-                    for j = 1, 4 do
-                        L[j].Color = C_ACCENT
-                        L[j].Thickness = 1.5
-                        L[j].Transparency = 1
-                        L[j].Visible = true
-                        espLines[#espLines + 1] = L[j]
-                    end
-                end
-
-                if espTracerEnabled then
-                    local tr = Drawing.new("Line")
-                    tr.From = Vector2.new(vp.X / 2, vp.Y)
-                    tr.To = Vector2.new(pos.X, pos.Y)
-                    tr.Color = C_ACCENT
-                    tr.Thickness = 1
-                    tr.Transparency = 0.65
-                    tr.Visible = true
-                    tracerLines[#tracerLines + 1] = tr
-                end
-
-                if espNamesEnabled or espDistanceEnabled then
-                    local tx = Drawing.new("Text")
-                    tx.Position = Vector2.new(pos.X, pos.Y - size / 2 - 14)
-                    tx.Size = 12
-                    tx.Center = true
-                    tx.Outline = true
-                    tx.Color = C_TEXT
-                    local content = ""
-                    if espNamesEnabled then content = content .. plr.Name .. " " end
-                    if espHealthEnabled then content = content .. "[" .. math.floor(hum.Health) .. "HP] " end
-                    if espDistanceEnabled then content = content .. "(" .. dist .. "m)" end
-                    tx.Text = content
-                    tx.Visible = true
-                    textDrawings[#textDrawings + 1] = tx
-                end
-            end
-        end
-    end
-end)
-
--- Chams
-RunService.Heartbeat:Connect(function()
-    if wallhackEnabled then
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character and not plr.Character:FindFirstChild("WIA_WH") then
-                local hl = Instance.new("Highlight")
-                hl.Name = "WIA_WH"
-                hl.FillColor = C_ACCENT
-                hl.FillTransparency = chamsOpacity
-                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                hl.Parent = plr.Character
-            end
-        end
-    end
-    if wallhackEnabled then
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr.Character and plr.Character:FindFirstChild("WIA_WH") then
-                plr.Character.WIA_WH.FillTransparency = chamsOpacity
-            end
-        end
-    end
-end)
-
--- ========== SHOW GUI AFTER LOADING ==========
-ScreenGui.Enabled = true
-setStatus("WIA HUB v10.0 загружен", C_OK)
+setStatus("WIA HUB v11.0 загружен", C_OK)
+notify("WIA HUB v11.0 готов", "success")
