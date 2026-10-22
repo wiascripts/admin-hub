@@ -1,8 +1,7 @@
 -- ================================================================= --
--- WIA HUB v11.0 Ultimate :: whitewia / tordark
--- Search + Silent Aim (fixed) + Wallcheck + AutoShoot + Hitbox Priority
--- + Item ESP + Team Check + Skeleton (fixed) + Color Picker
--- + Low Gravity + Wall Run + Freecam + Spectate + Cosmetics + Animations
+-- WIA HUB v12.0 :: whitewia / tordark
+-- Fixed: Animations (user's PACKS) + ESP Color + Skeleton + Korblox
+--        Spectate + Item ESP + SP button visibility
 -- ================================================================= --
 
 local Players = game:GetService("Players")
@@ -22,7 +21,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- ========== COLORS (soft, no neon) ==========
+-- ========== COLORS ==========
 local C_BG = Color3.fromRGB(18, 18, 24)
 local C_PANEL = Color3.fromRGB(26, 26, 34)
 local C_ROW = Color3.fromRGB(32, 32, 42)
@@ -133,7 +132,7 @@ local fovCircleVisible = true
 local silentAimEnabled = false
 local autoShootEnabled = false
 local silentAimWallcheck = true
-local aimPart = "Head" -- Head / HumanoidRootPart / UpperTorso / Random
+local aimPart = "Head"
 
 local hitboxEnabled, hitboxSize = false, 5
 local autoClickerEnabled, autoClickerDelay = false, 100
@@ -148,7 +147,6 @@ local skeletonColor = C_ACCENT
 local espColor = C_ACCENT
 local itemEspEnabled = false
 local teamCheckEnabled = true
-local espItems = {}
 
 local dashEnabled, dashPower = false, 90
 local dashKey = Enum.KeyCode.Q
@@ -159,199 +157,266 @@ local guiVisible = true
 local waitingHubBind = false
 
 local headlessEnabled, korbloxEnabled = false, false
-local currentAnimPack = "Default"
 
--- ========== ANIMATION LIBRARY ==========
--- Bundle ID / Asset ID подход. Для простоты используем прямые ID анимаций (R15).
--- Если анимация не грузится — игра может её блокировать, это нормально.
-local ANIM_PACKS = {
-    Default = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+-- ========== ANIMATION PACKS (user's working version) ==========
+local PACKS = {
+    ["Adidas Sports"] = {
+        WalkAnim = 18537392113, RunAnim = 18537384940, JumpAnim = 18537380791,
+        FallAnim = 18537367238, SwimIdle = 18537387180, Swim = 18537389531,
+        Animation1 = 18537376492, Animation2 = 18537371272, ClimbAnim = 18537363391,
     },
-    Zombie = {
-        idle = "rbxassetid://616158929", -- были данные 616158929/616157476
-        walk = "rbxassetid://616158929",
-        run = "rbxassetid://616158929",
-        jump = "rbxassetid://616158929",
-        fall = "rbxassetid://616158929",
-        climb = "rbxassetid://616158929",
-        swim = "rbxassetid://616158929",
-        swimidle = "rbxassetid://616158929",
-    },
-    Vampire = {
-        idle = "rbxassetid://1083462077",
-        walk = "rbxassetid://1083462077",
-        run = "rbxassetid://1083462077",
-        jump = "rbxassetid://1083462077",
-        fall = "rbxassetid://1083462077",
-        climb = "rbxassetid://1083462077",
-        swim = "rbxassetid://1083462077",
-        swimidle = "rbxassetid://1083462077",
-    },
-    Werewolf = {
-        idle = "rbxassetid://616158929",
-        walk = "rbxassetid://616158929",
-        run = "rbxassetid://616158929",
-        jump = "rbxassetid://616158929",
-        fall = "rbxassetid://616158929",
-        climb = "rbxassetid://616158929",
-        swim = "rbxassetid://616158929",
-        swimidle = "rbxassetid://616158929",
-    },
-    Adidas = {
-        idle = "rbxassetid://616163532",
-        walk = "rbxassetid://616165536",
-        run = "rbxassetid://616161920",
-        jump = "rbxassetid://616161920",
-        fall = "rbxassetid://616161920",
-        climb = "rbxassetid://616161920",
-        swim = "rbxassetid://616161920",
-        swimidle = "rbxassetid://616161920",
+    ["Adidas Community"] = {
+        WalkAnim = 122150855457006, RunAnim = 82598234841035, JumpAnim = 75290611992385,
+        FallAnim = 98600215928904, SwimIdle = 109346520324160, Swim = 133308483266208,
+        Animation1 = 122257458498464, Animation2 = 102357151005774, ClimbAnim = 88763136693023,
     },
     ["Adidas Aura"] = {
-        idle = "rbxassetid://616163532",
-        walk = "rbxassetid://616165536",
-        run = "rbxassetid://616161920",
-        jump = "rbxassetid://616161920",
-        fall = "rbxassetid://616161920",
-        climb = "rbxassetid://616161920",
-        swim = "rbxassetid://616161920",
-        swimidle = "rbxassetid://616161920",
+        WalkAnim = 83842218823011, RunAnim = 118320322718866, JumpAnim = 109996626521204,
+        FallAnim = 95603166884636, SwimIdle = 94922130551805, Swim = 134530128383903,
+        Animation1 = 110211186840347, Animation2 = 114191137265065, ClimbAnim = 97824616490448,
     },
-    Ninja = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+    ["Wicked Popular"] = {
+        WalkAnim = 92072849924640, RunAnim = 72301599441680, JumpAnim = 104325245285198,
+        FallAnim = 121152442762481, Animation1 = 118832222982049, ClimbAnim = 131326830509784,
+        SwimIdle = 113199415118199, Swim = 99384245425157, Animation2 = 76049494037641,
     },
-    Robot = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+    Elder = {
+        WalkAnim = 10921111375, RunAnim = 10921104374, JumpAnim = 10921107367,
+        FallAnim = 10921105765, SwimIdle = 10921110146, Swim = 10921108971,
+        ClimbAnim = 10921100400, Animation1 = 10921101664, Animation2 = 10921102574,
     },
-    Levitate = {
-        idle = "rbxassetid://313762630",
-        walk = "rbxassetid://313762630",
-        run = "rbxassetid://313762630",
-        jump = "rbxassetid://313762630",
-        fall = "rbxassetid://313762630",
-        climb = "rbxassetid://313762630",
-        swim = "rbxassetid://313762630",
-        swimidle = "rbxassetid://313762630",
+    Zombie = {
+        WalkAnim = 10921355261, RunAnim = 616163682, JumpAnim = 10921351278,
+        FallAnim = 10921350320, SwimIdle = 10921353442, Swim = 10921352344,
+        Animation1 = 10921344533, Animation2 = 10921345304, ClimbAnim = 10921343576,
     },
     Mage = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+        WalkAnim = 10921152678, RunAnim = 10921148209, JumpAnim = 10921149743,
+        FallAnim = 10921148939, SwimIdle = 10921151661, Swim = 10921150788,
+        ClimbAnim = 10921143404, Animation1 = 10921144709, Animation2 = 10921145797,
+    },
+    ["Catwalk Glam"] = {
+        WalkAnim = 109168724482748, RunAnim = 81024476153754, JumpAnim = 116936326516985,
+        FallAnim = 92294537340807, SwimIdle = 98854111361360, Swim = 134591743181628,
+        ClimbAnim = 119377220967554, Animation1 = 133806214992291, Animation2 = 94970088341563,
+    },
+    Astronaut = {
+        WalkAnim = 10921046031, RunAnim = 10921039308, JumpAnim = 10921042494,
+        FallAnim = 10921040576, SwimIdle = 10921045006, Swim = 10921044000,
+        ClimbAnim = 10921032124, Animation1 = 10921034824, Animation2 = 10921036806,
+    },
+    ['Wicked "Dancing Through Life"'] = {
+        WalkAnim = 73718308412641, RunAnim = 135515454877967, JumpAnim = 78508480717326,
+        FallAnim = 78147885297412, SwimIdle = 129183123083281, Swim = 110657013921774,
+        ClimbAnim = 129447497744818, Animation1 = 92849173543269, Animation2 = 132238900951109,
+    },
+    Werewolf = {
+        WalkAnim = 10921342074, RunAnim = 10921336997, JumpAnim = nil,
+        FallAnim = 10921337907, SwimIdle = 10921341319, Swim = 10921340419,
+        ClimbAnim = 10921329322, Animation1 = 10921330408, Animation2 = 10921333667,
+    },
+    Superhero = {
+        WalkAnim = 10921298616, RunAnim = 10921291831, JumpAnim = 10921294559,
+        FallAnim = 10921293373, SwimIdle = 10921297391, Swim = 10921295495,
+        ClimbAnim = 10921286911, Animation1 = 10921288909, Animation2 = 10921290167,
+    },
+    Toy = {
+        WalkAnim = 10921312010, RunAnim = 10921306285, JumpAnim = 10921308158,
+        FallAnim = 10921307241, SwimIdle = 10921310341, Swim = 10921309319,
+        ClimbAnim = 10921300839, Animation1 = 10921301576, Animation2 = nil,
+    },
+    ["No Boundaries"] = {
+        WalkAnim = 18747074203, RunAnim = 18747070484, JumpAnim = 18747069148,
+        FallAnim = 18747062535, SwimIdle = 18747071682, Swim = 18747073181,
+        ClimbAnim = 18747060903, Animation1 = 18747067405, Animation2 = 18747063918,
+    },
+    NFL = {
+        WalkAnim = 110358958299415, RunAnim = 117333533048078, JumpAnim = 119846112151352,
+        FallAnim = 129773241321032, SwimIdle = 79090109939093, Swim = 132697394189921,
+        ClimbAnim = 134630013742019, Animation1 = 92080889861410, Animation2 = 74451233229259,
+    },
+    ["Amazon Unboxed"] = {
+        WalkAnim = 90478085024465, RunAnim = 134824450619865, JumpAnim = 121454505477205,
+        FallAnim = 94788218468396, SwimIdle = 129126268464847, Swim = 105962919001086,
+        ClimbAnim = 121145883950231, Animation1 = 98281136301627, Animation2 = nil,
+    },
+    Vampire = {
+        WalkAnim = 10921326949, RunAnim = 10921320299, JumpAnim = 10921322186,
+        FallAnim = 10921321317, SwimIdle = 10921325443, Swim = 10921324408,
+        ClimbAnim = 10921314188, Animation1 = 10921315373, Animation2 = nil,
+    },
+    Ninja = {
+        Run=656118852, Walk=656121766, Jump=656117878, Fall=656115606,
+        Swim=656119721, SwimIdle=656121397, Climb=656114359,
+        Idle={656117400,656118341,886742569}
+    },
+    Robot = {
+        Run=616091570, Walk=616095330, Jump=616090535, Fall=616087089,
+        Swim=616092998, SwimIdle=616094091, Climb=616086039,
+        Idle={616088211,616089559,885531463}
+    },
+    Levitation = {
+        Run=616010382, Walk=616013216, Jump=616008936, Fall=616005863,
+        Swim=616011509, SwimIdle=616012453, Climb=616003713,
+        Idle={616006778,616008087,886862142}
     },
     Stylish = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+        Run=616140816, Walk=616146177, Jump=616139451, Fall=616134815,
+        Swim=616143378, SwimIdle=616144772, Climb=616133594,
+        Idle={616136790,616138447,886888594}
     },
-    Ghost = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+    Bubbly = {
+        Run=910025107, Walk=910034870, Jump=910016857, Fall=910001910,
+        Swim=910028158, SwimIdle=910030921, Climb=909997997,
+        Idle={910004836,910009958,1018536639}
     },
-    Knight = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
-    },
-    Cartoony = {
-        idle = "rbxassetid://507766666",
-        walk = "rbxassetid://507777826",
-        run = "rbxassetid://507767714",
-        jump = "rbxassetid://507765000",
-        fall = "rbxassetid://507767968",
-        climb = "rbxassetid://507765644",
-        swim = "rbxassetid://507784897",
-        swimidle = "rbxassetid://507785072",
+    Cartoon = {
+        Run=742638842, Walk=742640026, Jump=742637942, Fall=742637151,
+        Swim=742639220, SwimIdle=742639812, Climb=742636889,
+        Idle={742637544,742638445,885477856}
     },
 }
 
-local function applyAnimPack(packName)
-    local pack = ANIM_PACKS[packName]
-    if not pack then return end
-    local char = LocalPlayer.Character
-    if not char then return end
-    local animate = char:FindFirstChild("Animate")
-    if not animate then return end
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-    -- Останавливаем все текущие анимации
-    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-        track:Stop()
-    end
-    -- Подменяем AnimationId
-    local function setAnim(name, id)
-        local obj = animate:FindFirstChild(name)
-        if obj and obj:IsA("Animation") then
-            obj.AnimationId = id
+local ATTR_LAST = "AnimPack_Last"
+local applyingAnim = false
+
+local function waitForAnimate(char)
+    for _ = 1, 40 do
+        local a = char:FindFirstChild("Animate")
+        if a and a:FindFirstChild("idle") and a:FindFirstChild("run") and a:FindFirstChild("walk") then
+            return a
         end
+        task.wait(0.1)
     end
-    -- R15 структура
-    local idle = animate:FindFirstChild("idle")
-    if idle then
-        setAnim("idle", pack.idle)
-        local idle2 = idle:FindFirstChild("Animation2")
-        if idle2 then idle2.AnimationId = pack.idle end
-    end
-    setAnim("walk", pack.walk)
-    setAnim("run", pack.run)
-    setAnim("jump", pack.jump)
-    setAnim("fall", pack.fall)
-    setAnim("climb", pack.climb)
-    setAnim("swim", pack.swim)
-    setAnim("swimidle", pack.swimidle)
-    -- Перезапускаем
-    humanoid:ChangeState(Enum.HumanoidStateType.Landed)
-    notify("Анимация: " .. packName, "success")
+    return nil
 end
 
--- ========== COSMETICS (Headless / Korblox) ==========
-local HEADLESS_MESH = "rbxassetid://1095708"
-local KORBLOX_MESH = "rbxassetid://101851696"
-local KORBLOX_TEXTURE = "rbxassetid://101851254"
-local KORBLOX_DARK = Color3.fromRGB(64, 64, 64)
+local function setAnim(animObj, id)
+    if animObj and id then
+        animObj.AnimationId = "rbxassetid://" .. tostring(id)
+    end
+end
 
+local function stopAllTracks(hum)
+    if not hum then return end
+    for _, t in ipairs(hum:GetPlayingAnimationTracks()) do
+        pcall(function() t:Stop(0) end)
+    end
+end
+
+local function ensureAnim(folder, name)
+    if not folder then return nil end
+    local a = folder:FindFirstChild(name)
+    if not a then
+        a = Instance.new("Animation")
+        a.Name = name
+        a.Parent = folder
+    end
+    return a
+end
+
+local function ensureIdleSlots(idleFolder, n)
+    if not idleFolder then return end
+    n = n or 2
+    for i = 1, n do
+        ensureAnim(idleFolder, "Animation" .. i)
+    end
+end
+
+local function pick(pack, ...)
+    for i = 1, select("#", ...) do
+        local k = select(i, ...)
+        local v = pack[k]
+        if v ~= nil then return v end
+    end
+    return nil
+end
+
+local function applyPack(packName)
+    if applyingAnim then return false end
+    applyingAnim = true
+
+    local pack = PACKS[packName]
+    if not pack then
+        applyingAnim = false
+        return false
+    end
+
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local animate = waitForAnimate(char)
+    if not animate then
+        applyingAnim = false
+        notify("Animate не найден", "error")
+        return false
+    end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    stopAllTracks(hum)
+
+    local runObj = ensureAnim(animate:FindFirstChild("run"), "RunAnim")
+    local walkObj = ensureAnim(animate:FindFirstChild("walk"), "WalkAnim")
+    local jumpObj = ensureAnim(animate:FindFirstChild("jump"), "JumpAnim")
+    local fallObj = ensureAnim(animate:FindFirstChild("fall"), "FallAnim")
+    local climbObj = ensureAnim(animate:FindFirstChild("climb"), "ClimbAnim")
+    local swimObj = ensureAnim(animate:FindFirstChild("swim"), "Swim")
+    local swimIdleObj = ensureAnim(animate:FindFirstChild("swimidle"), "SwimIdle")
+    local idleFolder = animate:FindFirstChild("idle")
+
+    setAnim(walkObj, pick(pack, "WalkAnim", "Walk"))
+    setAnim(runObj, pick(pack, "RunAnim", "Run"))
+    setAnim(jumpObj, pick(pack, "JumpAnim", "Jump"))
+    setAnim(fallObj, pick(pack, "FallAnim", "Fall"))
+    setAnim(climbObj, pick(pack, "ClimbAnim", "Climb"))
+    setAnim(swimObj, pick(pack, "Swim"))
+    setAnim(swimIdleObj, pick(pack, "SwimIdle") or pick(pack, "Swim"))
+
+    if idleFolder then
+        local a1 = pick(pack, "Animation1")
+        local a2 = pick(pack, "Animation2")
+        if a1 or a2 then
+            ensureIdleSlots(idleFolder, 2)
+            local id1 = a1 or a2
+            local id2 = a2 or a1 or id1
+            setAnim(idleFolder:FindFirstChild("Animation1"), id1)
+            setAnim(idleFolder:FindFirstChild("Animation2"), id2)
+        elseif pack.Idle and #pack.Idle > 0 then
+            ensureIdleSlots(idleFolder, math.max(2, #pack.Idle))
+            setAnim(idleFolder:FindFirstChild("Animation1"), pack.Idle[1])
+            setAnim(idleFolder:FindFirstChild("Animation2"), pack.Idle[2] or pack.Idle[1])
+            for i = 3, #pack.Idle do
+                local a = idleFolder:FindFirstChild("Animation" .. i)
+                if a then setAnim(a, pack.Idle[i]) end
+            end
+        end
+    end
+
+    animate.Disabled = true
+    task.wait(0.06)
+    animate.Disabled = false
+
+    if hum then
+        pcall(function()
+            hum:ChangeState(Enum.HumanoidStateType.Landed)
+            task.wait(0.03)
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end)
+    end
+
+    pcall(function() LocalPlayer:SetAttribute(ATTR_LAST, packName) end)
+    applyingAnim = false
+    notify("Анимация: " .. packName, "success")
+    return true
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.6)
+    local saved = LocalPlayer:GetAttribute(ATTR_LAST)
+    if type(saved) == "string" and saved ~= "" and PACKS[saved] then
+        applyPack(saved)
+    end
+end)
+
+-- ========== COSMETICS ==========
 local function applyHeadless()
     local char = LocalPlayer.Character
     if not char then return end
@@ -362,44 +427,56 @@ local function applyHeadless()
     for _, v in pairs(head:GetChildren()) do
         if v:IsA("Decal") then v:Destroy() end
     end
-    local mesh = head:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", head)
+    local mesh = head:FindFirstChildOfClass("SpecialMesh")
+    if not mesh then
+        mesh = Instance.new("SpecialMesh", head)
+    end
     mesh.MeshType = Enum.MeshType.FileMesh
-    mesh.MeshId = HEADLESS_MESH
+    mesh.MeshId = "rbxassetid://1095708"
     mesh.Scale = Vector3.new(0.001, 0.001, 0.001)
 end
 
 local function applyKorblox()
     local char = LocalPlayer.Character
     if not char then return end
-    -- R15
+    local KORBLOX_MESH = "rbxassetid://139607718"
+    local KORBLOX_TEXTURE = "rbxassetid://139607389"
+    local DARK = Color3.fromRGB(64, 64, 64)
+
     local upper = char:FindFirstChild("RightUpperLeg")
     local lower = char:FindFirstChild("RightLowerLeg")
     local foot = char:FindFirstChild("RightFoot")
+
     if upper and lower and foot then
         for _, p in ipairs({upper, lower, foot}) do
             for _, c in ipairs(p:GetChildren()) do
                 if c:IsA("SpecialMesh") or c:IsA("CharacterMesh") then c:Destroy() end
             end
         end
-        upper.MeshId = KORBLOX_MESH
-        upper.TextureID = KORBLOX_TEXTURE
+        local mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.MeshId = KORBLOX_MESH
+        mesh.TextureId = KORBLOX_TEXTURE
+        mesh.Scale = Vector3.new(1, 1, 1)
+        mesh.Parent = upper
+        upper.Color = DARK
         lower.Transparency = 1
         foot.Transparency = 1
-        upper.Color = KORBLOX_DARK
         return
     end
-    -- R6
-    local rightLeg = char:FindFirstChild("Right Leg")
-    if rightLeg then
-        for _, c in ipairs(rightLeg:GetChildren()) do
+
+    local leg = char:FindFirstChild("Right Leg")
+    if leg then
+        for _, c in ipairs(leg:GetChildren()) do
             if c:IsA("SpecialMesh") or c:IsA("CharacterMesh") then c:Destroy() end
         end
         local mesh = Instance.new("SpecialMesh")
         mesh.MeshType = Enum.MeshType.FileMesh
         mesh.MeshId = KORBLOX_MESH
         mesh.TextureId = KORBLOX_TEXTURE
-        mesh.Parent = rightLeg
-        rightLeg.Color = KORBLOX_DARK
+        mesh.Scale = Vector3.new(1, 1, 1)
+        mesh.Parent = leg
+        leg.Color = DARK
     end
 end
 
@@ -410,13 +487,16 @@ local function removeCosmetics()
     if head then
         head.Transparency = 0
         local m = head:FindFirstChildOfClass("SpecialMesh")
-        if m and m.MeshId == HEADLESS_MESH then m:Destroy() end
+        if m and m.MeshId == "rbxassetid://1095708" then m:Destroy() end
     end
     for _, name in ipairs({"RightUpperLeg", "RightLowerLeg", "RightFoot", "Right Leg"}) do
         local p = char:FindFirstChild(name)
         if p then
             for _, c in ipairs(p:GetChildren()) do
-                if c:IsA("SpecialMesh") and c.MeshId == KORBLOX_MESH then c:Destroy() end
+                if c:IsA("SpecialMesh") and c.MeshId == "rbxassetid://139607718" then c:Destroy() end
+            end
+            if name == "RightLowerLeg" or name == "RightFoot" then
+                p.Transparency = 0
             end
         end
     end
@@ -455,7 +535,7 @@ local WmTitle = Instance.new("TextLabel")
 WmTitle.Size = UDim2.new(1, -20, 0, 20)
 WmTitle.Position = UDim2.new(0, 14, 0, 4)
 WmTitle.BackgroundTransparency = 1
-WmTitle.Text = "WIA HUB v11.0"
+WmTitle.Text = "WIA HUB v12.0"
 WmTitle.TextColor3 = C_TEXT
 WmTitle.TextSize = 13
 WmTitle.Font = Enum.Font.GothamBold
@@ -502,7 +582,7 @@ PlayerListGui.Parent = CoreGui
 PlayerListGui.Enabled = false
 
 local plV = workspace.CurrentCamera.ViewportSize
-local plW = math.clamp(plV.X * 0.5, 240, 320)
+local plW = math.clamp(plV.X * 0.5, 260, 340)
 local plH = math.clamp(plV.Y - 80, 200, 400)
 
 local PlayerListMain = Instance.new("Frame")
@@ -596,7 +676,7 @@ ResetTargetBtn.BorderSizePixel = 0
 ResetTargetBtn.Parent = PlayerListMain
 addCorner(ResetTargetBtn, 8)
 
--- ========== DRAGGABLE ==========
+-- ========== DRAG ==========
 local function makeDraggable(frame, handle)
     handle = handle or frame
     local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
@@ -664,7 +744,7 @@ Title.Parent = MainFrame
 local TitleVer = Instance.new("TextLabel")
 TitleVer.Size = UDim2.new(0, 40, 0, 34)
 TitleVer.Position = UDim2.new(0, 76, 0, 0)
-TitleVer.Text = "v11"
+TitleVer.Text = "v12"
 TitleVer.TextColor3 = C_DIM
 TitleVer.TextSize = 11
 TitleVer.TextXAlignment = Enum.TextXAlignment.Left
@@ -743,10 +823,6 @@ local function selectTab(name)
         }):Play()
         if on then
             t.page.Visible = true
-            local s = t.page:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-            s.Parent = t.page
-            s.Scale = 0.96
-            TweenService:Create(s, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1 }):Play()
         else
             t.page.Visible = false
         end
@@ -817,7 +893,7 @@ end)
 makeDraggable(MainFrame, Title)
 makeDraggable(PlayerListMain, PlayerListTitle)
 
--- ========== TOGGLE BUTTON ==========
+-- ========== TOGGLE ==========
 local ToggleGui = Instance.new("ScreenGui")
 ToggleGui.Name = "WiaToggle"
 ToggleGui.ResetOnSpawn = false
@@ -835,12 +911,6 @@ ToggleBtn.Font = Enum.Font.GothamBold
 ToggleBtn.TextSize = 18
 ToggleBtn.Parent = ToggleGui
 addCorner(ToggleBtn, 21)
-
-local toggleStroke = Instance.new("UIStroke")
-toggleStroke.Thickness = 1
-toggleStroke.Color = C_STROKE
-toggleStroke.Transparency = 0.3
-toggleStroke.Parent = ToggleBtn
 
 makeDraggable(ToggleBtn)
 
@@ -902,11 +972,8 @@ makeFlyButton("▼", UDim2.new(1, -74, 0.5, 0), function(v) flyDown = v end)
 
 -- ========== UI FACTORY ==========
 local allElements = {}
-local searchBarRef = nil
 
-local function registerElement(el)
-    table.insert(allElements, el)
-end
+local function registerElement(el) table.insert(allElements, el) end
 
 local function createSection(text)
     local lbl = Instance.new("TextLabel")
@@ -918,7 +985,7 @@ local function createSection(text)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.BackgroundTransparency = 1
     lbl.Parent = currentPage
-    registerElement({ obj = lbl, name = text, type = "section" })
+    registerElement({ obj = lbl, name = text })
     return lbl
 end
 
@@ -1028,7 +1095,6 @@ local function createTumbler(labelText, defaultState, opts)
             waitingBind = false
             bindBtn.Text = "⌨"
             bindBtn.BackgroundColor3 = C_ROW_D
-            notify("Бинд сброшен: " .. labelText)
         end)
 
         UserInputService.InputBegan:Connect(function(input, gp)
@@ -1052,7 +1118,7 @@ local function createTumbler(labelText, defaultState, opts)
         setState = function(n) state = n update() event:Fire(n) end,
         onToggle = function(cb) event.Event:Connect(cb) end,
     }
-    registerElement({ obj = row, name = labelText, type = "tumbler" })
+    registerElement({ obj = row, name = labelText })
     return obj
 end
 
@@ -1168,10 +1234,11 @@ local function createSlider(labelText, minVal, maxVal, defaultVal, callback)
         end
     end)
 
-    registerElement({ obj = row, name = labelText, type = "slider" })
+    registerElement({ obj = row, name = labelText })
     return { setValue = function(v) value = v setVisual(v) end }
 end
 
+-- ✅ FIX: createButton теперь передаёт кнопку в callback
 local function createButton(labelText, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 36)
@@ -1192,79 +1259,73 @@ local function createButton(labelText, callback)
     btn.MouseButton1Up:Connect(function()
         TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Back), { Scale = 1 }):Play()
     end)
-    btn.MouseButton1Click:Connect(callback)
-    registerElement({ obj = btn, name = labelText, type = "button" })
+    btn.MouseButton1Click:Connect(function()
+        callback(btn)
+    end)
+    registerElement({ obj = btn, name = labelText })
     return btn
 end
 
 -- ========== SEARCH BAR ==========
-local function createSearchBar()
-    local searchFrame = Instance.new("Frame")
-    searchFrame.Size = UDim2.new(1, -24, 0, 32)
-    searchFrame.Position = UDim2.new(0, 12, 0, 74)
-    searchFrame.BackgroundColor3 = C_ROW
-    searchFrame.BorderSizePixel = 0
-    searchFrame.ZIndex = 10
-    searchFrame.Parent = MainFrame
-    addCorner(searchFrame, 8)
+local searchFrame = Instance.new("Frame")
+searchFrame.Size = UDim2.new(1, -24, 0, 32)
+searchFrame.Position = UDim2.new(0, 12, 0, 74)
+searchFrame.BackgroundColor3 = C_ROW
+searchFrame.BorderSizePixel = 0
+searchFrame.Parent = MainFrame
+addCorner(searchFrame, 8)
 
-    local searchBox = Instance.new("TextBox")
-    searchBox.Size = UDim2.new(1, -44, 1, 0)
-    searchBox.Position = UDim2.new(0, 12, 0, 0)
-    searchBox.BackgroundTransparency = 1
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -44, 1, 0)
+searchBox.Position = UDim2.new(0, 12, 0, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.Text = ""
+searchBox.PlaceholderText = "Поиск функций..."
+searchBox.TextColor3 = C_TEXT
+searchBox.PlaceholderColor3 = C_DIM
+searchBox.TextSize = 12
+searchBox.Font = Enum.Font.Gotham
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.ClearTextOnFocus = false
+searchBox.Parent = searchFrame
+
+local clearBtn = Instance.new("TextButton")
+clearBtn.Size = UDim2.new(0, 24, 0, 24)
+clearBtn.Position = UDim2.new(1, -32, 0, 4)
+clearBtn.Text = "✕"
+clearBtn.TextColor3 = C_DIM
+clearBtn.BackgroundColor3 = C_ROW_D
+clearBtn.TextSize = 12
+clearBtn.Font = Enum.Font.GothamBold
+clearBtn.BorderSizePixel = 0
+clearBtn.Parent = searchFrame
+addCorner(clearBtn, 6)
+
+clearBtn.MouseButton1Click:Connect(function()
     searchBox.Text = ""
-    searchBox.PlaceholderText = "Поиск функций..."
-    searchBox.TextColor3 = C_TEXT
-    searchBox.PlaceholderColor3 = C_DIM
-    searchBox.TextSize = 12
-    searchBox.Font = Enum.Font.Gotham
-    searchBox.TextXAlignment = Enum.TextXAlignment.Left
-    searchBox.ClearTextOnFocus = false
-    searchBox.Parent = searchFrame
+    for _, el in ipairs(allElements) do
+        if el.obj and el.obj.Parent then el.obj.Visible = true end
+    end
+end)
 
-    local clearBtn = Instance.new("TextButton")
-    clearBtn.Size = UDim2.new(0, 24, 0, 24)
-    clearBtn.Position = UDim2.new(1, -32, 0, 4)
-    clearBtn.Text = "✕"
-    clearBtn.TextColor3 = C_DIM
-    clearBtn.BackgroundColor3 = C_ROW_D
-    clearBtn.TextSize = 12
-    clearBtn.Font = Enum.Font.GothamBold
-    clearBtn.BorderSizePixel = 0
-    clearBtn.Parent = searchFrame
-    addCorner(clearBtn, 6)
-
-    clearBtn.MouseButton1Click:Connect(function()
-        searchBox.Text = ""
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local query = searchBox.Text:lower()
+    if query == "" then
         for _, el in ipairs(allElements) do
-            if el.obj and el.obj.Parent then
-                el.obj.Visible = true
-            end
+            if el.obj and el.obj.Parent then el.obj.Visible = true end
         end
-    end)
-
-    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local query = searchBox.Text:lower()
-        if query == "" then
-            for _, el in ipairs(allElements) do
-                if el.obj and el.obj.Parent then el.obj.Visible = true end
-            end
-            return
+        return
+    end
+    for _, el in ipairs(allElements) do
+        if el.obj and el.obj.Parent and el.name then
+            local match = el.name:lower():find(query, 1, true)
+            el.obj.Visible = match ~= nil
         end
-        for _, el in ipairs(allElements) do
-            if el.obj and el.obj.Parent and el.name then
-                local match = el.name:lower():find(query, 1, true)
-                el.obj.Visible = match ~= nil
-            end
-        end
-    end)
+    end
+end)
 
-    PageHolder.Position = UDim2.new(0, 0, 0, 112)
-    PageHolder.Size = UDim2.new(1, 0, 1, -136)
-    searchBarRef = searchBox
-end
-
-createSearchBar()
+PageHolder.Position = UDim2.new(0, 0, 0, 112)
+PageHolder.Size = UDim2.new(1, 0, 1, -136)
 
 -- ========== FLIGHT ==========
 local function stopFlight()
@@ -1288,12 +1349,10 @@ local function startFlight()
     savedGravity = workspace.Gravity
     workspace.Gravity = 0
     hum.PlatformStand = true
-
     bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
     bodyVelocity.Velocity = Vector3.zero
     bodyVelocity.Parent = root
-
     bodyGyro = Instance.new("BodyGyro")
     bodyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
     bodyGyro.P = 9e4
@@ -1319,11 +1378,9 @@ RunService.Heartbeat:Connect(function()
         startFlight()
         if not bodyVelocity then return end
     end
-
     local md = hum.MoveDirection
     local camCF = Camera.CFrame
     local look, right = camCF.LookVector, camCF.RightVector
-
     local move = Vector3.zero
     if md.Magnitude > 0.01 then
         local fl = Vector3.new(look.X, 0, look.Z)
@@ -1334,7 +1391,6 @@ RunService.Heartbeat:Connect(function()
     end
     if flyUp or UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.yAxis end
     if flyDown or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.yAxis end
-
     if move.Magnitude > 0.01 then
         bodyVelocity.Velocity = move.Unit * flySpeed
         local t = root.Position + move.Unit
@@ -1352,11 +1408,9 @@ local function createTPTool()
     tool.Name = "WIA_TP"
     tool.RequiresHandle = false
     tool.CanBeDropped = false
-
     tool.Equipped:Connect(function()
         tpEnabled = true
         Mouse.Icon = "rbxasset://SystemCursors/Crosshair"
-        setStatus("TP Ready", C_OK)
     end)
     tool.Unequipped:Connect(function()
         tpEnabled = false
@@ -1369,15 +1423,6 @@ local function createTPTool()
         local root = char and char:FindFirstChild("HumanoidRootPart")
         if root and hit then
             root.CFrame = CFrame.new(hit.Position + Vector3.new(0, 3, 0))
-            local p = Instance.new("Part")
-            p.Size = Vector3.new(2, 0.5, 2)
-            p.Position = hit.Position
-            p.Anchored, p.CanCollide = true, false
-            p.BrickColor = BrickColor.new("Bright violet")
-            p.Material = Enum.Material.Neon
-            p.Transparency = 0.5
-            p.Parent = workspace
-            Debris:AddItem(p, 0.5)
         end
     end)
     return tool
@@ -1419,9 +1464,8 @@ local function loadF3X()
 end
 
 -- ========== SILENT AIM (fixed) ==========
-local silentAimHook = nil
 if hookmetamethod and getnamecallmethod then
-    local ok = pcall(function()
+    pcall(function()
         local old
         old = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
@@ -1431,6 +1475,7 @@ if hookmetamethod and getnamecallmethod then
                     local minDist = aimbotFOV
                     for _, p in pairs(Players:GetPlayers()) do
                         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+                            if teamCheckEnabled and p.Team == LocalPlayer.Team then continue end
                             local s, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
                             if onScreen then
                                 local d = (Vector2.new(s.X, s.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
@@ -1440,12 +1485,11 @@ if hookmetamethod and getnamecallmethod then
                     end
                 end
                 if target and target.Character then
-                    local aimPartObj = target.Character:FindFirstChild(aimPart) or target.Character:FindFirstChild("Head")
-                    if aimPartObj then
-                        -- Wallcheck
+                    local ap = target.Character:FindFirstChild(aimPart) or target.Character:FindFirstChild("Head")
+                    if ap then
                         if silentAimWallcheck then
                             local origin = Camera.CFrame.Position
-                            local dir = (aimPartObj.Position - origin)
+                            local dir = ap.Position - origin
                             local params = RaycastParams.new()
                             params.FilterDescendantsInstances = {LocalPlayer.Character, target.Character}
                             params.FilterType = Enum.RaycastFilterType.Exclude
@@ -1456,7 +1500,7 @@ if hookmetamethod and getnamecallmethod then
                         local mod = false
                         for i = 1, #args do
                             if typeof(args[i]) == "CFrame" then
-                                args[i] = CFrame.new(args[i].Position, aimPartObj.Position)
+                                args[i] = CFrame.new(args[i].Position, ap.Position)
                                 mod = true
                             end
                         end
@@ -1467,12 +1511,6 @@ if hookmetamethod and getnamecallmethod then
             return old(self, ...)
         end)
     end)
-    if not ok then
-        task.spawn(function()
-            task.wait(2)
-            notify("Silent Aim не поддерживается executor'ом", "error")
-        end)
-    end
 end
 
 -- ========== DASH ==========
@@ -1505,21 +1543,21 @@ end
 
 ResetTargetBtn.MouseButton1Click:Connect(function()
     setAimTarget(nil)
-    updatePlayerList()
+    if updatePlayerList then updatePlayerList() end
 end)
 
 local function makeRowButton(parent, text, xOff, color)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 50, 0, 34)
-    b.Position = UDim2.new(1, xOff, 0.5, -17)
+    b.Size = UDim2.new(0, 44, 0, 30)
+    b.Position = UDim2.new(1, xOff, 0.5, -15)
     b.Text = text
     b.TextColor3 = C_TEXT
-    b.TextSize = 12
+    b.TextSize = 11
     b.Font = Enum.Font.GothamBold
     b.BackgroundColor3 = color
     b.BorderSizePixel = 0
     b.Parent = parent
-    addCorner(b, 8)
+    addCorner(b, 6)
     return b
 end
 
@@ -1533,28 +1571,38 @@ updatePlayerList = function()
             order = order + 1
             local sel = (aimbotSelectedTarget == plr)
             local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 46)
+            row.Size = UDim2.new(1, 0, 0, 42)
             row.BackgroundColor3 = sel and Color3.fromRGB(30, 55, 45) or C_ROW
             row.BorderSizePixel = 0
             row.LayoutOrder = order
             row.Parent = PlayerListContainer
             addCorner(row, 8)
 
+            -- name width reduced so SP/TP/AIM buttons are clearly visible
             local nm = Instance.new("TextLabel")
-            nm.Size = UDim2.new(1, -124, 1, 0)
+            nm.Size = UDim2.new(1, -160, 1, 0)
             nm.Position = UDim2.new(0, 10, 0, 0)
             nm.BackgroundTransparency = 1
             nm.Text = plr.Name
             nm.TextColor3 = C_TEXT
-            nm.TextSize = 13
+            nm.TextSize = 12
             nm.Font = Enum.Font.Gotham
             nm.TextXAlignment = Enum.TextXAlignment.Left
             nm.TextTruncate = Enum.TextTruncate.AtEnd
             nm.Parent = row
 
-            local tpBtn = makeRowButton(row, "TP", -112, C_ROW_D)
-            local aimBtn = makeRowButton(row, sel and "✓" or "AIM", -58, sel and Color3.fromRGB(30, 100, 65) or C_ROW_D)
-            local specBtn = makeRowButton(row, "SP", -166, C_ROW_D)
+            local spBtn = makeRowButton(row, "SP", -142, C_ROW_D)
+            local tpBtn = makeRowButton(row, "TP", -96, C_ROW_D)
+            local aimBtn = makeRowButton(row, sel and "✓" or "AIM", -50,
+                sel and Color3.fromRGB(30, 100, 65) or C_ROW_D)
+
+            spBtn.MouseButton1Click:Connect(function()
+                spectateTarget = plr
+                if freecamEnabled then
+                    toggleFreecam(false)
+                end
+                notify("Спектатор: " .. plr.Name, "success")
+            end)
 
             tpBtn.MouseButton1Click:Connect(function()
                 local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1564,13 +1612,10 @@ updatePlayerList = function()
                     notify("TP к " .. plr.Name, "success")
                 end
             end)
+
             aimBtn.MouseButton1Click:Connect(function()
                 setAimTarget(aimbotSelectedTarget == plr and nil or plr)
                 updatePlayerList()
-            end)
-            specBtn.MouseButton1Click:Connect(function()
-                spectateTarget = plr
-                notify("Спектатор: " .. plr.Name, "success")
             end)
         end
     end
@@ -1581,13 +1626,16 @@ Players.PlayerAdded:Connect(function()
 end)
 Players.PlayerRemoving:Connect(function(plr)
     if aimbotSelectedTarget == plr then setAimTarget(nil) end
-    if spectateTarget == plr then spectateTarget = nil end
+    if spectateTarget == plr then
+        spectateTarget = nil
+        Camera.CameraType = Enum.CameraType.Custom
+    end
     task.defer(function()
         if playerListEnabled then updatePlayerList() end
     end)
 end)
 
--- ========== AIMBOT / AUTO-SHOOT ==========
+-- ========== AIMBOT ==========
 local function getAimbotTarget()
     if aimbotSelectedTarget and aimbotSelectedTarget.Character and aimbotSelectedTarget.Character:FindFirstChild("Head") then
         return aimbotSelectedTarget
@@ -1646,7 +1694,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- AutoShoot
 RunService.RenderStepped:Connect(function()
     if not autoShootEnabled then return end
     local t = getAimbotTarget()
@@ -1678,13 +1725,10 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ========== ESP / SKELETON (fixed with pool) ==========
+-- ========== DRAWING POOLS ==========
 local skelPool = {}
-local skelActive = 0
 local espPool = {}
-local espActive = 0
 local textPool = {}
-local textActive = 0
 
 local function getLine(pool, index)
     if not pool[index] then
@@ -1705,33 +1749,33 @@ local function getText(pool, index)
     return pool[index]
 end
 
-local function hideAll(pool, active)
-    for i = 1, #pool do
-        pool[i].Visible = false
-    end
-end
+-- ✅ FIX: Skeleton transparency + thickness + optional self-test
+local skeletonSelfTest = false
 
 RunService.RenderStepped:Connect(function()
     if not Drawing then return end
 
-    -- Skeleton
+    -- ===== SKELETON =====
     if skeletonEnabled then
         local idx = 0
         for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
-                for _, joint in pairs(plr.Character:GetDescendants()) do
-                    if joint:IsA("Motor6D") and joint.Part0 and joint.Part1 then
-                        local p0 = Camera:WorldToViewportPoint(joint.Part0.Position)
-                        local p1 = Camera:WorldToViewportPoint(joint.Part1.Position)
-                        if p0.Z > 0 and p1.Z > 0 then
-                            idx = idx + 1
-                            local line = getLine(skelPool, idx)
-                            line.From = Vector2.new(p0.X, p0.Y)
-                            line.To = Vector2.new(p1.X, p1.Y)
-                            line.Color = skeletonColor
-                            line.Thickness = 1
-                            line.Transparency = 0.9
+            local valid = plr ~= LocalPlayer or skeletonSelfTest
+            if valid and plr.Character then
+                local isTeammate = teamCheckEnabled and plr.Team == LocalPlayer.Team and plr ~= LocalPlayer
+                if not isTeammate then
+                    for _, joint in ipairs(plr.Character:GetDescendants()) do
+                        if joint:IsA("Motor6D") and joint.Part0 and joint.Part1 then
+                            local p0 = Camera:WorldToViewportPoint(joint.Part0.Position)
+                            local p1 = Camera:WorldToViewportPoint(joint.Part1.Position)
+                            if p0.Z > 0 and p1.Z > 0 then
+                                idx = idx + 1
+                                local line = getLine(skelPool, idx)
+                                line.From = Vector2.new(p0.X, p0.Y)
+                                line.To = Vector2.new(p1.X, p1.Y)
+                                line.Color = skeletonColor
+                                line.Thickness = 1.5
+                                line.Transparency = 0.15
+                            end
                         end
                     end
                 end
@@ -1742,89 +1786,88 @@ RunService.RenderStepped:Connect(function()
         for i = 1, #skelPool do skelPool[i].Visible = false end
     end
 
-    -- ESP / Text
-    local eIdx = 0
-    local tIdx = 0
+    -- ===== ESP =====
+    local eIdx, tIdx = 0, 0
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
-            if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
-            local head = plr.Character:FindFirstChild("Head")
-            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            if head and hum then
-                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                if onScreen then
-                    local dist = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
-                    local size = math.clamp(100 / math.max(dist, 1) * 10, 15, 45)
+            local isTeammate = teamCheckEnabled and plr.Team == LocalPlayer.Team
+            if not isTeammate then
+                local head = plr.Character:FindFirstChild("Head")
+                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                if head and hum then
+                    local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                    if onScreen then
+                        local dist = math.floor((head.Position - Camera.CFrame.Position).Magnitude)
+                        local size = math.clamp(100 / math.max(dist, 1) * 10, 15, 45)
 
-                    if espBoxEnabled then
-                        local x, y = pos.X - size / 2, pos.Y - size / 2
-                        local corners = {
-                            {Vector2.new(x, y), Vector2.new(x + size, y)},
-                            {Vector2.new(x + size, y), Vector2.new(x + size, y + size)},
-                            {Vector2.new(x + size, y + size), Vector2.new(x, y + size)},
-                            {Vector2.new(x, y + size), Vector2.new(x, y)},
-                        }
-                        for _, c in ipairs(corners) do
+                        if espBoxEnabled then
+                            local x, y = pos.X - size / 2, pos.Y - size / 2
+                            local edges = {
+                                {Vector2.new(x, y), Vector2.new(x + size, y)},
+                                {Vector2.new(x + size, y), Vector2.new(x + size, y + size)},
+                                {Vector2.new(x + size, y + size), Vector2.new(x, y + size)},
+                                {Vector2.new(x, y + size), Vector2.new(x, y)},
+                            }
+                            for _, e in ipairs(edges) do
+                                eIdx = eIdx + 1
+                                local line = getLine(espPool, eIdx)
+                                line.From = e[1]
+                                line.To = e[2]
+                                line.Color = espColor
+                                line.Thickness = 1.5
+                                line.Transparency = 1
+                            end
+                        end
+
+                        if espTracerEnabled then
                             eIdx = eIdx + 1
                             local line = getLine(espPool, eIdx)
-                            line.From = c[1]
-                            line.To = c[2]
+                            line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                            line.To = Vector2.new(pos.X, pos.Y)
                             line.Color = espColor
-                            line.Thickness = 1.5
-                            line.Transparency = 1
+                            line.Thickness = 1
+                            line.Transparency = 0.65
                         end
-                    end
 
-                    if espTracerEnabled then
-                        eIdx = eIdx + 1
-                        local line = getLine(espPool, eIdx)
-                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        line.To = Vector2.new(pos.X, pos.Y)
-                        line.Color = espColor
-                        line.Thickness = 1
-                        line.Transparency = 0.65
-                    end
-
-                    if espNamesEnabled or espDistanceEnabled then
-                        tIdx = tIdx + 1
-                        local text = getText(textPool, tIdx)
-                        text.Position = Vector2.new(pos.X, pos.Y - size / 2 - 14)
-                        text.Color = espColor
-                        local content = ""
-                        if espNamesEnabled then content = content .. plr.Name .. " " end
-                        if espHealthEnabled then content = content .. "[" .. math.floor(hum.Health) .. "HP] " end
-                        if espDistanceEnabled then content = content .. "(" .. dist .. "m)" end
-                        text.Text = content
-                    end
-                end
-            end
-        end
-    end
-    for i = eIdx + 1, #espPool do espPool[i].Visible = false end
-    for i = tIdx + 1, #textPool do textPool[i].Visible = false end
-
-    -- Item ESP
-    if itemEspEnabled then
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("Tool") or obj:IsA("Model") and obj:FindFirstChildOfClass("Tool") then
-                local tool = obj:IsA("Tool") and obj or obj:FindFirstChildOfClass("Tool")
-                if tool and tool.Parent then
-                    local handle = tool:FindFirstChild("Handle")
-                    if handle then
-                        local pos, onScreen = Camera:WorldToViewportPoint(handle.Position)
-                        if onScreen then
+                        if espNamesEnabled or espDistanceEnabled then
                             tIdx = tIdx + 1
                             local text = getText(textPool, tIdx)
-                            text.Position = Vector2.new(pos.X, pos.Y)
-                            text.Color = Color3.fromRGB(255, 215, 0)
-                            text.Text = tool.Name
+                            text.Position = Vector2.new(pos.X, pos.Y - size / 2 - 14)
+                            text.Color = espColor
+                            local content = ""
+                            if espNamesEnabled then content = content .. plr.Name .. " " end
+                            if espHealthEnabled then content = content .. "[" .. math.floor(hum.Health) .. "HP] " end
+                            if espDistanceEnabled then content = content .. "(" .. dist .. "m)" end
+                            text.Text = content
                         end
                     end
                 end
             end
         end
-        for i = tIdx + 1, #textPool do textPool[i].Visible = false end
     end
+
+    -- ===== ITEM ESP (uses separate counter so it doesn't hide player texts) =====
+    if itemEspEnabled then
+        for _, obj in pairs(workspace:GetDescendants()) do
+            local tool = obj:IsA("Tool") and obj or (obj:IsA("Model") and obj:FindFirstChildOfClass("Tool"))
+            if tool then
+                local handle = tool:FindFirstChild("Handle")
+                if handle then
+                    local pos, onScreen = Camera:WorldToViewportPoint(handle.Position)
+                    if onScreen then
+                        tIdx = tIdx + 1
+                        local text = getText(textPool, tIdx)
+                        text.Position = Vector2.new(pos.X, pos.Y)
+                        text.Color = Color3.fromRGB(255, 215, 0)
+                        text.Text = tool.Name
+                    end
+                end
+            end
+        end
+    end
+
+    for i = eIdx + 1, #espPool do espPool[i].Visible = false end
+    for i = tIdx + 1, #textPool do textPool[i].Visible = false end
 end)
 
 -- ========== CHAMS ==========
@@ -1832,17 +1875,20 @@ RunService.Heartbeat:Connect(function()
     if wallhackEnabled then
         for _, plr in pairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
-                if teamCheckEnabled and plr.Team == LocalPlayer.Team then continue end
-                if not plr.Character:FindFirstChild("WIA_WH") then
-                    local hl = Instance.new("Highlight")
-                    hl.Name = "WIA_WH"
-                    hl.FillColor = C_ACCENT
-                    hl.FillTransparency = chamsOpacity
-                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    hl.Parent = plr.Character
-                else
-                    plr.Character.WIA_WH.FillTransparency = chamsOpacity
+                local isTeammate = teamCheckEnabled and plr.Team == LocalPlayer.Team
+                if not isTeammate then
+                    local existing = plr.Character:FindFirstChild("WIA_WH")
+                    if not existing then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "WIA_WH"
+                        hl.FillColor = C_ACCENT
+                        hl.FillTransparency = chamsOpacity
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        hl.Parent = plr.Character
+                    else
+                        existing.FillTransparency = chamsOpacity
+                    end
                 end
             end
         end
@@ -1852,11 +1898,13 @@ end)
 -- ========== FREECAM ==========
 local freecamConnection = nil
 local freecamSpeed = 50
-local function toggleFreecam(st)
+function toggleFreecam(st)
     freecamEnabled = st
     if st then
+        spectateTarget = nil
         local camera = workspace.CurrentCamera
         camera.CameraType = Enum.CameraType.Scriptable
+        camera.CameraSubject = nil
         local cf = camera.CFrame
         local yaw, pitch = 0, 0
         freecamConnection = RunService.RenderStepped:Connect(function(dt)
@@ -1871,30 +1919,43 @@ local function toggleFreecam(st)
             if move.Magnitude > 0 then
                 cf = cf + move.Unit * freecamSpeed * dt
             end
-            -- Мышь
             local delta = UserInputService:GetMouseDelta()
             yaw = yaw - delta.X * 0.003
-            pitch = math.clamp(pitch - delta.Y * 0.003, -math.pi/2, math.pi/2)
+            pitch = math.clamp(pitch - delta.Y * 0.003, -math.pi / 2, math.pi / 2)
             camera.CFrame = CFrame.new(cf.Position) * CFrame.Angles(pitch, yaw, 0)
         end)
-        notify("Freecam ON (WASD + Space/Shift)", "success")
+        notify("Freecam ON", "success")
     else
         if freecamConnection then freecamConnection:Disconnect() freecamConnection = nil end
         workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            workspace.CurrentCamera.CameraSubject = hum
+        end
         notify("Freecam OFF")
     end
 end
 
--- ========== SPECTATE ==========
+-- ========== SPECTATE (fixed) ==========
 RunService.RenderStepped:Connect(function()
-    if spectateTarget and spectateTarget.Character then
-        local targetHead = spectateTarget.Character:FindFirstChild("Head")
-        if targetHead then
+    if spectateTarget then
+        local char = spectateTarget.Character
+        local head = char and char:FindFirstChild("Head")
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if head and root then
             Camera.CameraType = Enum.CameraType.Scriptable
-            Camera.CFrame = CFrame.new(targetHead.Position - targetHead.CFrame.LookVector * 10 + Vector3.new(0, 5, 0), targetHead.Position)
+            Camera.CameraSubject = nil
+            local offset = root.CFrame.LookVector * -14 + Vector3.new(0, 6, 0)
+            Camera.CFrame = CFrame.new(head.Position + offset, head.Position)
         end
     elseif Camera.CameraType == Enum.CameraType.Scriptable and not freecamEnabled then
         Camera.CameraType = Enum.CameraType.Custom
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            Camera.CameraSubject = hum
+        end
     end
 end)
 
@@ -1948,13 +2009,9 @@ createTumbler("ESP Distance & HP", true).onToggle(function(st)
     espDistanceEnabled, espHealthEnabled = st, st
 end)
 createTumbler("Skeleton ESP", false).onToggle(function(st) skeletonEnabled = st end)
+createTumbler("Skeleton Self Test", false).onToggle(function(st) skeletonSelfTest = st end)
 createTumbler("Team Check", true).onToggle(function(st) teamCheckEnabled = st end)
-createTumbler("Item ESP", false).onToggle(function(st)
-    itemEspEnabled = st
-    if not st then
-        for _, t in pairs(textPool) do t.Visible = false end
-    end
-end)
+createTumbler("Item ESP", false).onToggle(function(st) itemEspEnabled = st end)
 createSection("Chams")
 createTumbler("Chams (Wallhack)", false).onToggle(function(st)
     wallhackEnabled = st
@@ -1968,7 +2025,7 @@ createTumbler("Chams (Wallhack)", false).onToggle(function(st)
 end)
 createSlider("Chams Opacity %", 0, 100, 35, function(v) chamsOpacity = v / 100 end)
 
--- Color pickers (простые кнопки циклического перебора)
+-- ✅ FIX: color picker uses btn parameter passed by createButton
 local colors = {
     {name = "Purple", c = Color3.fromRGB(124, 92, 255)},
     {name = "Red", c = Color3.fromRGB(220, 80, 80)},
@@ -1978,15 +2035,15 @@ local colors = {
     {name = "White", c = Color3.fromRGB(240, 240, 240)},
 }
 local espColorIdx, skelColorIdx = 1, 1
-createButton("ESP Color: " .. colors[espColorIdx].name, function(btn)
+createButton("ESP Color: " .. colors[espColorIdx].name, function(b)
     espColorIdx = espColorIdx % #colors + 1
     espColor = colors[espColorIdx].c
-    btn.Text = "ESP Color: " .. colors[espColorIdx].name
+    if b then b.Text = "ESP Color: " .. colors[espColorIdx].name end
 end)
-createButton("Skeleton Color: " .. colors[skelColorIdx].name, function(btn)
+createButton("Skeleton Color: " .. colors[skelColorIdx].name, function(b)
     skelColorIdx = skelColorIdx % #colors + 1
     skeletonColor = colors[skelColorIdx].c
-    btn.Text = "Skeleton Color: " .. colors[skelColorIdx].name
+    if b then b.Text = "Skeleton Color: " .. colors[skelColorIdx].name end
 end)
 
 -- ========== TAB: MOVE ==========
@@ -2027,15 +2084,15 @@ createSection("Dash")
 createTumbler("Dash", false).onToggle(function(st) dashEnabled = st end)
 createSlider("Dash Power", 30, 300, 90, function(v) dashPower = v end)
 local dashBtn
-dashBtn = createButton("Dash Key: " .. dashKey.Name, function()
+dashBtn = createButton("Dash Key: " .. dashKey.Name, function(b)
     if waitingHubBind then return end
-    dashBtn.Text = "Нажми клавишу..."
+    if b then b.Text = "Нажми клавишу..." end
     local c
     c = UserInputService.InputBegan:Connect(function(input, gp)
         if gp then return end
         if input.UserInputType == Enum.UserInputType.Keyboard then
             dashKey = input.KeyCode
-            dashBtn.Text = "Dash Key: " .. dashKey.Name
+            if b then b.Text = "Dash Key: " .. dashKey.Name end
             notify("Dash = " .. dashKey.Name, "success")
             c:Disconnect()
         end
@@ -2048,6 +2105,9 @@ createTumbler("Freecam", false).onToggle(function(st) toggleFreecam(st) end)
 createButton("Спектатор: сброс", function()
     spectateTarget = nil
     Camera.CameraType = Enum.CameraType.Custom
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then Camera.CameraSubject = hum end
     notify("Спектатор сброшен")
 end)
 
@@ -2108,14 +2168,12 @@ createTumbler("Korblox", false).onToggle(function(st)
 end)
 
 createSection("Анимации")
-local animList = {
-    "Default", "Zombie", "Vampire", "Werewolf", "Adidas", "Adidas Aura",
-    "Ninja", "Robot", "Levitate", "Mage", "Stylish", "Ghost", "Knight", "Cartoony"
-}
-for _, animName in ipairs(animList) do
+local sortedPacks = {}
+for name in pairs(PACKS) do table.insert(sortedPacks, name) end
+table.sort(sortedPacks, function(a, b) return a:lower() < b:lower() end)
+for _, animName in ipairs(sortedPacks) do
     createButton("Анимация: " .. animName, function()
-        currentAnimPack = animName
-        applyAnimPack(animName)
+        applyPack(animName)
     end)
 end
 
@@ -2154,10 +2212,10 @@ createTumbler("Chat Spam", false).onToggle(function(st) chatSpamEnabled = st end
 
 createSection("Interface")
 local hubKeyBtn
-hubKeyBtn = createButton("Hub Key: " .. hubToggleKey.Name, function()
+hubKeyBtn = createButton("Hub Key: " .. hubToggleKey.Name, function(b)
     if waitingHubBind then return end
     waitingHubBind = true
-    hubKeyBtn.Text = "Нажми клавишу..."
+    if b then b.Text = "Нажми клавишу..." end
     notify("Нажми клавишу для открытия хаба")
 end)
 createTumbler("Watermark", true, { bindable = false }).onToggle(function(st)
@@ -2277,7 +2335,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Anti-Fling
 RunService.Heartbeat:Connect(function()
     if not antiFlingEnabled then return end
     local char = LocalPlayer.Character
@@ -2294,7 +2351,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Anti-Ragdoll
 local function bindAntiRagdoll(char)
     local hum = char:WaitForChild("Humanoid", 5)
     if not hum then return end
@@ -2307,7 +2363,6 @@ end
 if LocalPlayer.Character then bindAntiRagdoll(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiRagdoll)
 
--- Wall Run (простая реализация: если рядом стена и идёт движение — прижимаем к стене)
 RunService.Heartbeat:Connect(function()
     if not wallRunEnabled then return end
     local char = LocalPlayer.Character
@@ -2315,12 +2370,10 @@ RunService.Heartbeat:Connect(function()
     local hum = char and char:FindFirstChild("Humanoid")
     if not (root and hum) then return end
     if hum.MoveDirection.Magnitude < 0.1 then return end
-    local rayOrigin = root.Position
-    local rayDir = hum.MoveDirection.Unit * 3
     local params = RaycastParams.new()
     params.FilterDescendantsInstances = {char}
     params.FilterType = Enum.RaycastFilterType.Exclude
-    local result = workspace:Raycast(rayOrigin, rayDir, params)
+    local result = workspace:Raycast(root.Position, hum.MoveDirection.Unit * 3, params)
     if result then
         root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + result.Normal * 10 + Vector3.yAxis * 20
     end
@@ -2360,5 +2413,5 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-setStatus("WIA HUB v11.0 загружен", C_OK)
-notify("WIA HUB v11.0 готов", "success")
+setStatus("WIA HUB v12.0 загружен", C_OK)
+notify("WIA HUB v12.0 готов", "success")
