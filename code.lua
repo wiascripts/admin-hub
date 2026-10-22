@@ -141,7 +141,7 @@ local origBright, origAmbient, origFog = nil, nil, nil
 local aimbotEnabled, aimbotFOV = false, 90
 local aimbotSmoothness = 5
 local aimbotSelectedTarget = nil
-local fovCircleVisible = true
+local fovCircleVisible = false
 local silentAimEnabled = false
 local autoShootEnabled = false
 local silentAimWallcheck = true
@@ -153,13 +153,13 @@ local triggerbotEnabled = false
 local chatSpamEnabled, chatSpamDelay = false, 5
 local chatSpamMessage = "WIA HUB ON TOP"
 
-local espBoxEnabled, espTracerEnabled = true, true
-local espNamesEnabled, espDistanceEnabled = true, true
-local espHealthEnabled, skeletonEnabled = true, false
+local espBoxEnabled, espTracerEnabled = false, false
+local espNamesEnabled, espDistanceEnabled = false, false
+local espHealthEnabled, skeletonEnabled = false, false
 local skeletonColor = C_ACCENT
 local espColor = C_ACCENT
 local itemEspEnabled = false
-local teamCheckEnabled = true
+local teamCheckEnabled = false
 
 local dashEnabled, dashPower = false, 90
 local dashKey = Enum.KeyCode.Q
@@ -2026,13 +2026,13 @@ createTumbler("Silent Aim", false).onToggle(function(st)
     silentAimEnabled = st
     notify(st and "Silent Aim ON" or "Silent Aim OFF", st and "success" or nil)
 end)
-createTumbler("Wallcheck", true).onToggle(function(st) silentAimWallcheck = st end)
+createTumbler("Wallcheck", false).onToggle(function(st) silentAimWallcheck = st end)
 createTumbler("AutoShoot", false).onToggle(function(st) autoShootEnabled = st end)
-createTumbler("FOV Circle", true).onToggle(function(st) fovCircleVisible = st end)
+createTumbler("FOV Circle", false).onToggle(function(st) fovCircleVisible = st end)
 createSlider("Aimbot FOV", 10, 400, 90, function(v) aimbotFOV = v end)
 createSlider("Aimbot Smooth", 1, 20, 5, function(v) aimbotSmoothness = v end)
 createSection("Aim Part")
-createTumbler("Head", true, { bindable = false }).onToggle(function(st)
+createTumbler("Head", false, { bindable = false }).onToggle(function(st)
     if st then aimPart = "Head" end
 end)
 createTumbler("Torso", false, { bindable = false }).onToggle(function(st)
@@ -2058,15 +2058,15 @@ createSlider("Hitbox Size", 2, 20, 5, function(v) hitboxSize = v end)
 -- ========== TAB: VISUALS ==========
 createTab("Visuals")
 createSection("ESP")
-createTumbler("ESP Boxes", true).onToggle(function(st) espBoxEnabled = st end)
-createTumbler("ESP Tracers", true).onToggle(function(st) espTracerEnabled = st end)
-createTumbler("ESP Names", true).onToggle(function(st) espNamesEnabled = st end)
-createTumbler("ESP Distance & HP", true).onToggle(function(st)
+createTumbler("ESP Boxes", false).onToggle(function(st) espBoxEnabled = st end)
+createTumbler("ESP Tracers", false).onToggle(function(st) espTracerEnabled = st end)
+createTumbler("ESP Names", false).onToggle(function(st) espNamesEnabled = st end)
+createTumbler("ESP Distance & HP", false).onToggle(function(st)
     espDistanceEnabled, espHealthEnabled = st, st
 end)
 createTumbler("Skeleton ESP", false).onToggle(function(st) skeletonEnabled = st end)
 createTumbler("Skeleton Self Test", false).onToggle(function(st) skeletonSelfTest = st end)
-createTumbler("Team Check", true).onToggle(function(st) teamCheckEnabled = st end)
+createTumbler("Team Check", false).onToggle(function(st) teamCheckEnabled = st end)
 createTumbler("Item ESP", false).onToggle(function(st) itemEspEnabled = st end)
 createSection("Chams")
 createTumbler("Chams (Wallhack)", false).onToggle(function(st)
@@ -2661,11 +2661,11 @@ emoteUGCButton.MouseButton1Click:Connect(function()
     fetchUgcPage(true)
 end)
 emoteSearchButton.MouseButton1Click:Connect(function()
-    if emoteMode == "UGC" then fetchUgcPage(true) else renderEmoteLibrary() end
+    if emoteMode == "UGC" then fetchUgcPage(true) else loadEmoteLibrary() end
 end)
 emoteSearch.FocusLost:Connect(function(enterPressed)
     if not enterPressed then return end
-    if emoteMode == "UGC" then fetchUgcPage(true) else renderEmoteLibrary() end
+    if emoteMode == "UGC" then fetchUgcPage(true) else loadEmoteLibrary() end
 end)
 emotePrevious.MouseButton1Click:Connect(function()
     if emoteMode == "UGC" then fetchUgcPage(false, "previous") end
@@ -2690,7 +2690,7 @@ emoteStopButton.MouseButton1Click:Connect(function()
 end)
 
 emoteLibraryButton.BackgroundColor3 = C_ACCENT
-loadEmoteLibrary()
+setEmoteStatus("Open Emotes and press Search to load the list", C_DIM)
 
 -- ========== TAB: WORLD ==========
 createTab("World")
@@ -2733,7 +2733,7 @@ hubKeyBtn = createButton("Hub Key: " .. hubToggleKey.Name, function(b)
     if b then b.Text = "Нажми клавишу..." end
     notify("Нажми клавишу для открытия хаба")
 end)
-createTumbler("Watermark", true, { bindable = false }).onToggle(function(st)
+createTumbler("Watermark", false, { bindable = false }).onToggle(function(st)
     WmGui.Enabled = st
 end)
 
