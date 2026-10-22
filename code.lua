@@ -1,7 +1,6 @@
 -- ================================================================= --
--- WIA HUB v12.3 :: whitewia / tordark
--- CHANGES: SP/STOP toggle + skeleton fix + UGC Emotes integrated
--- (AFEM removed, only emote loader kept)
+-- WIA HUB v12.2 :: whitewia / tordark
+-- CHANGES: SP/STOP toggle + skeleton fix (Transparency + GetJoints)
 -- ================================================================= --
 
 local function main()
@@ -554,7 +553,7 @@ do
     WmTitle.Size = UDim2.new(1, -20, 0, 20)
     WmTitle.Position = UDim2.new(0, 14, 0, 4)
     WmTitle.BackgroundTransparency = 1
-    WmTitle.Text = "WIA HUB v12.3"
+    WmTitle.Text = "WIA HUB v12.2"
     WmTitle.TextColor3 = C_TEXT
     WmTitle.TextSize = 13
     WmTitle.Font = Enum.Font.GothamBold
@@ -1568,6 +1567,7 @@ local function setAimTarget(plr)
     end
 end
 
+-- === NEW: stopSpectate для toggle SP/STOP ===
 local function stopSpectate()
     if not spectateTarget then return end
     spectateTarget = nil
@@ -1626,6 +1626,7 @@ updatePlayerList = function()
             nm.TextTruncate = Enum.TextTruncate.AtEnd
             nm.Parent = row
 
+            -- === NEW: SP/STOP toggle ===
             local isSpectating = (spectateTarget == plr)
             local spBtn = makeRowButton(row, isSpectating and "STOP" or "SP", -142,
                 isSpectating and Color3.fromRGB(100, 45, 45) or C_ROW_D)
@@ -1805,6 +1806,7 @@ local skeletonSelfTest = false
 RunService.RenderStepped:Connect(function()
     if not Drawing then return end
 
+    -- ===== SKELETON (fixed: GetJoints + Transparency=1 + Thickness=2 + skip zero-len) =====
     if skeletonEnabled then
         local idx = 0
         for _, plr in pairs(Players:GetPlayers()) do
@@ -1840,6 +1842,7 @@ RunService.RenderStepped:Connect(function()
         for i = 1, #skelPool do skelPool[i].Visible = false end
     end
 
+    -- ===== ESP =====
     local eIdx, tIdx = 0, 0
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -1899,6 +1902,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- ===== ITEM ESP =====
     if itemEspEnabled then
         for _, obj in pairs(workspace:GetDescendants()) do
             local tool = obj:IsA("Tool") and obj or (obj:IsA("Model") and obj:FindFirstChildOfClass("Tool"))
@@ -2228,131 +2232,465 @@ do
     end
 end
 
--- ========== UGC EMOTES (интегрировано из AFEM) ==========
-createSection("Эмоции (UGC)")
+-- ========== TAB: EMOTES (ported from AFEM Max Lite) ==========
+createTab("Emotes")
+createSection("Emote Library")
 
-local emoteSearchBox = Instance.new("TextBox")
-emoteSearchBox.Size = UDim2.new(1, 0, 0, 32)
-emoteSearchBox.BackgroundColor3 = C_ROW_D
-emoteSearchBox.BorderSizePixel = 0
-emoteSearchBox.Text = ""
-emoteSearchBox.PlaceholderText = "Поиск эмоции..."
-emoteSearchBox.TextColor3 = C_TEXT
-emoteSearchBox.PlaceholderColor3 = C_DIM
-emoteSearchBox.TextSize = 12
-emoteSearchBox.Font = Enum.Font.Gotham
-emoteSearchBox.TextXAlignment = Enum.TextXAlignment.Left
-emoteSearchBox.ClearTextOnFocus = false
-emoteSearchBox.Parent = currentPage
-addCorner(emoteSearchBox, 6)
+local emotePanel = Instance.new("Frame")
+emotePanel.Size = UDim2.new(1, 0, 0, 350)
+emotePanel.BackgroundTransparency = 1
+emotePanel.BorderSizePixel = 0
+emotePanel.Parent = currentPage
 
-local emoteScroll = Instance.new("ScrollingFrame")
-emoteScroll.Size = UDim2.new(1, 0, 0, 280)
-emoteScroll.BackgroundColor3 = C_ROW
-emoteScroll.BorderSizePixel = 0
-emoteScroll.ScrollBarThickness = 3
-emoteScroll.ScrollBarImageColor3 = C_ACCENT
-emoteScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-emoteScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-emoteScroll.ScrollingDirection = Enum.ScrollingDirection.Y
-emoteScroll.Parent = currentPage
-addCorner(emoteScroll, 8)
+local emoteSearch = Instance.new("TextBox")
+emoteSearch.Size = UDim2.new(1, -76, 0, 32)
+emoteSearch.Position = UDim2.new(0, 0, 0, 0)
+emoteSearch.BackgroundColor3 = C_ROW
+emoteSearch.BorderSizePixel = 0
+emoteSearch.ClearTextOnFocus = false
+emoteSearch.PlaceholderText = "Search emotes..."
+emoteSearch.Text = ""
+emoteSearch.TextColor3 = C_TEXT
+emoteSearch.PlaceholderColor3 = C_DIM
+emoteSearch.TextSize = 12
+emoteSearch.Font = Enum.Font.Gotham
+emoteSearch.TextXAlignment = Enum.TextXAlignment.Left
+emoteSearch.Parent = emotePanel
+addCorner(emoteSearch, 8)
+local emoteSearchPadding = Instance.new("UIPadding")
+emoteSearchPadding.PaddingLeft = UDim.new(0, 9)
+emoteSearchPadding.PaddingRight = UDim.new(0, 6)
+emoteSearchPadding.Parent = emoteSearch
 
-local emoteLayout = Instance.new("UIListLayout")
-emoteLayout.Padding = UDim.new(0, 4)
-emoteLayout.SortOrder = Enum.SortOrder.LayoutOrder
-emoteLayout.Parent = emoteScroll
+local emoteSearchButton = Instance.new("TextButton")
+emoteSearchButton.Size = UDim2.new(0, 68, 0, 32)
+emoteSearchButton.Position = UDim2.new(1, -68, 0, 0)
+emoteSearchButton.Text = "Search"
+emoteSearchButton.TextColor3 = C_TEXT
+emoteSearchButton.TextSize = 11
+emoteSearchButton.Font = Enum.Font.GothamBold
+emoteSearchButton.BackgroundColor3 = C_ACCENT
+emoteSearchButton.BorderSizePixel = 0
+emoteSearchButton.Parent = emotePanel
+addCorner(emoteSearchButton, 8)
 
-local emotePad = Instance.new("UIPadding")
-emotePad.PaddingLeft = UDim.new(0, 6)
-emotePad.PaddingRight = UDim.new(0, 6)
-emotePad.PaddingTop = UDim.new(0, 6)
-emotePad.PaddingBottom = UDim.new(0, 6)
-emotePad.Parent = emoteScroll
+local emoteModeRow = Instance.new("Frame")
+emoteModeRow.Size = UDim2.new(1, 0, 0, 28)
+emoteModeRow.Position = UDim2.new(0, 0, 0, 39)
+emoteModeRow.BackgroundTransparency = 1
+emoteModeRow.Parent = emotePanel
 
-local allUGCEmotes = {}
-local emoteButtons = {}
-local emoteRenderOrder = 0
+local function makeEmoteModeButton(text, pos, width)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(width, -4, 1, 0)
+    b.Position = UDim2.new(pos, pos == 0 and 0 or 4, 0, 0)
+    b.Text = text
+    b.TextColor3 = C_TEXT
+    b.TextSize = 11
+    b.Font = Enum.Font.GothamBold
+    b.BackgroundColor3 = C_ROW
+    b.BorderSizePixel = 0
+    b.AutoButtonColor = false
+    b.Parent = emoteModeRow
+    addCorner(b, 7)
+    return b
+end
 
-local function playUGCEmote(emote)
+local emoteLibraryButton = makeEmoteModeButton("AFEM LIST", 0, 0.5)
+local emoteUGCButton = makeEmoteModeButton("UGC CATALOG", 0.5, 0.5)
+
+local emoteResults = Instance.new("ScrollingFrame")
+emoteResults.Size = UDim2.new(1, 0, 0, 218)
+emoteResults.Position = UDim2.new(0, 0, 0, 74)
+emoteResults.BackgroundColor3 = C_PANEL
+emoteResults.BackgroundTransparency = 0.15
+emoteResults.BorderSizePixel = 0
+emoteResults.ScrollBarThickness = 3
+emoteResults.ScrollBarImageColor3 = C_ACCENT
+emoteResults.AutomaticCanvasSize = Enum.AutomaticSize.Y
+emoteResults.CanvasSize = UDim2.new(0, 0, 0, 0)
+emoteResults.Parent = emotePanel
+addCorner(emoteResults, 8)
+local emoteResultPadding = Instance.new("UIPadding")
+emoteResultPadding.PaddingTop = UDim.new(0, 5)
+emoteResultPadding.PaddingBottom = UDim.new(0, 5)
+emoteResultPadding.PaddingLeft = UDim.new(0, 5)
+emoteResultPadding.PaddingRight = UDim.new(0, 5)
+emoteResultPadding.Parent = emoteResults
+local emoteResultLayout = Instance.new("UIListLayout")
+emoteResultLayout.Padding = UDim.new(0, 5)
+emoteResultLayout.SortOrder = Enum.SortOrder.LayoutOrder
+emoteResultLayout.Parent = emoteResults
+
+local emotePrevious = Instance.new("TextButton")
+emotePrevious.Size = UDim2.new(0, 84, 0, 26)
+emotePrevious.Position = UDim2.new(0, 0, 0, 298)
+emotePrevious.Text = "Previous"
+emotePrevious.TextColor3 = C_TEXT
+emotePrevious.TextSize = 10
+emotePrevious.Font = Enum.Font.GothamBold
+emotePrevious.BackgroundColor3 = C_ROW
+emotePrevious.BorderSizePixel = 0
+emotePrevious.Visible = false
+emotePrevious.Parent = emotePanel
+addCorner(emotePrevious, 7)
+
+local emoteNext = Instance.new("TextButton")
+emoteNext.Size = UDim2.new(0, 84, 0, 26)
+emoteNext.Position = UDim2.new(1, -84, 0, 298)
+emoteNext.Text = "Next"
+emoteNext.TextColor3 = C_TEXT
+emoteNext.TextSize = 10
+emoteNext.Font = Enum.Font.GothamBold
+emoteNext.BackgroundColor3 = C_ROW
+emoteNext.BorderSizePixel = 0
+emoteNext.Visible = false
+emoteNext.Parent = emotePanel
+addCorner(emoteNext, 7)
+
+local emoteStatus = Instance.new("TextLabel")
+emoteStatus.Size = UDim2.new(1, -2, 0, 18)
+emoteStatus.Position = UDim2.new(0, 1, 0, 329)
+emoteStatus.BackgroundTransparency = 1
+emoteStatus.Text = "Loading emote list..."
+emoteStatus.TextColor3 = C_DIM
+emoteStatus.TextSize = 10
+emoteStatus.Font = Enum.Font.Gotham
+emoteStatus.TextXAlignment = Enum.TextXAlignment.Left
+emoteStatus.TextTruncate = Enum.TextTruncate.AtEnd
+emoteStatus.Parent = emotePanel
+
+local emoteMode = "AFEM"
+local emoteLibrary = {}
+local emoteCurrentId = nil
+local emoteCurrentTrack = nil
+local emoteBusy = false
+local ugcAnimationCache = {}
+local ugcCursorHistory = {""}
+local ugcCursorIndex = 1
+local ugcNextCursor = ""
+local ugcQuery = ""
+local ugcHasNext = false
+
+local fallbackEmoteJson = '[{"id":14353423348,"animationid":"http://www.roblox.com/asset/?id=14352343065","name":"BabyQueen-BouncyTwirl"},{"id":14353421343,"animationid":"http://www.roblox.com/asset/?id=14352340648","name":"BabyQueen-FaceFrame"},{"id":16553249658,"animationid":"http://www.roblox.com/asset/?id=16553163212","name":"MaeStephens-PianoHands"}]'
+local emoteLibraryUrl = "https://raw.githubusercontent.com/Joystickplays/AFEM/refs/heads/main/emotes.json"
+
+local function setEmoteStatus(message, color)
+    if emoteStatus and emoteStatus.Parent then
+        emoteStatus.Text = tostring(message)
+        emoteStatus.TextColor3 = color or C_DIM
+    end
+end
+
+local function normalizeAnimationId(value)
+    if value == nil then return nil end
+    local s = tostring(value)
+    local id = s:match("rbxassetid://(%d+)") or s:match("[?&]id=(%d+)") or s:match("(%d+)")
+    if id then return "rbxassetid://" .. id end
+    return nil
+end
+
+local function clearEmoteResults()
+    for _, child in ipairs(emoteResults:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+end
+
+local function stopCurrentEmote()
+    local stopped = false
+    if emoteCurrentTrack then
+        pcall(function() emoteCurrentTrack:Stop(0.15) end)
+        pcall(function() emoteCurrentTrack:Destroy() end)
+        emoteCurrentTrack = nil
+        stopped = true
+    end
     local char = LocalPlayer.Character
-    if not char then return end
-    local animate = char:FindFirstChild("Animate")
-    if not animate or not animate:FindFirstChild("PlayEmote") then
-        notify("Animate.PlayEmote не найден в этой игре", "error")
-        return
-    end
-    local animId = emote.animationid or ("rbxassetid://" .. tostring(emote.id))
-    if type(animId) == "string" then
-        if animId:match("^http") then
-            local id = animId:match("id=(%d+)")
-            if id then animId = "rbxassetid://" .. id end
-        elseif animId:match("^%d+$") then
-            animId = "rbxassetid://" .. animId
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local animator = hum and hum:FindFirstChildOfClass("Animator")
+    if animator then
+        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+            local anim = track.Animation
+            if anim and ((anim.Name == "WIAHubEmote" or anim.Name == "AFEMInvokedEmote") or (emoteCurrentId and normalizeAnimationId(anim.AnimationId) == emoteCurrentId)) then
+                pcall(function() track:Stop(0.15) end)
+                stopped = true
+            end
         end
     end
+    emoteCurrentId = nil
+    return stopped
+end
+
+local function playWiaEmote(rawId, emoteName)
+    local animationId = normalizeAnimationId(rawId)
+    if not animationId then
+        setEmoteStatus("Invalid animation ID", C_ERR)
+        return false
+    end
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then
+        setEmoteStatus("Character/Humanoid not found", C_ERR)
+        return false
+    end
+
+    stopCurrentEmote()
     local anim = Instance.new("Animation")
-    anim.Name = "WIA_InvokedEmote"
-    anim.AnimationId = animId
-    local ok = pcall(function()
-        animate.PlayEmote:Invoke(anim)
-    end)
-    if ok then
-        notify("Эмоция: " .. tostring(emote.name), "success")
-    else
-        notify("Не удалось проиграть эмоцию", "error")
+    anim.Name = "AFEMInvokedEmote"
+    anim.AnimationId = animationId
+    local animate = char:FindFirstChild("Animate")
+    local playFunc = animate and animate:FindFirstChild("PlayEmote")
+    local playedByAnimate = false
+    if playFunc and playFunc:IsA("BindableFunction") then
+        local ok = pcall(function() playFunc:Invoke(anim) end)
+        playedByAnimate = ok
     end
+
+    if playedByAnimate then
+        emoteCurrentId = animationId
+        task.defer(function()
+            task.wait(0.1)
+            local currentChar = LocalPlayer.Character
+            local currentHum = currentChar and currentChar:FindFirstChildOfClass("Humanoid")
+            local animator = currentHum and currentHum:FindFirstChildOfClass("Animator")
+            if animator then
+                for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                    if track.Animation and normalizeAnimationId(track.Animation.AnimationId) == animationId then
+                        emoteCurrentTrack = track
+                        break
+                    end
+                end
+            end
+        end)
+        setEmoteStatus("Playing: " .. tostring(emoteName or "Emote"), C_OK)
+        return true
+    end
+
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = hum
+    end
+    local directAnimation = Instance.new("Animation")
+    directAnimation.Name = "WIAHubEmote"
+    directAnimation.AnimationId = animationId
+    local ok, trackOrError = pcall(function()
+        return animator:LoadAnimation(directAnimation)
+    end)
+    if not ok or not trackOrError then
+        directAnimation:Destroy()
+        setEmoteStatus("Can't load this animation", C_ERR)
+        return false
+    end
+    emoteCurrentTrack = trackOrError
+    emoteCurrentId = animationId
+    emoteCurrentTrack.Priority = Enum.AnimationPriority.Action
+    local played = pcall(function() emoteCurrentTrack:Play(0.15, 1, 1) end)
+    if not played then
+        pcall(function() emoteCurrentTrack:Destroy() end)
+        emoteCurrentTrack = nil
+        setEmoteStatus("Animation failed to play", C_ERR)
+        return false
+    end
+    setEmoteStatus("Playing: " .. tostring(emoteName or "Emote"), C_OK)
+    return true
 end
 
-local function renderEmotes(filter)
-    for _, btn in ipairs(emoteButtons) do
-        if btn and btn.Parent then btn:Destroy() end
-    end
-    emoteButtons = {}
-    emoteRenderOrder = 0
-    filter = (filter or ""):lower()
-    for _, emote in ipairs(allUGCEmotes) do
-        if emote.name and (filter == "" or tostring(emote.name):lower():find(filter, 1, true)) then
-            emoteRenderOrder = emoteRenderOrder + 1
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 0, 30)
-            btn.BackgroundColor3 = C_ROW_D
-            btn.BorderSizePixel = 0
-            btn.Text = "▶  " .. tostring(emote.name)
-            btn.TextColor3 = C_TEXT
-            btn.TextSize = 12
-            btn.Font = Enum.Font.Gotham
-            btn.TextXAlignment = Enum.TextXAlignment.Left
-            btn.TextTruncate = Enum.TextTruncate.AtEnd
-            btn.LayoutOrder = emoteRenderOrder
-            btn.Parent = emoteScroll
-            addCorner(btn, 6)
-            btn.MouseButton1Click:Connect(function()
-                playUGCEmote(emote)
+local function createEmoteResult(entry, sourceMode)
+    local name = tostring(entry.name or entry.title or ("Emote " .. tostring(entry.id or "")))
+    local row = Instance.new("TextButton")
+    row.Name = "WiaEmoteRow"
+    row.Size = UDim2.new(1, -2, 0, 32)
+    row.BackgroundColor3 = C_ROW
+    row.BorderSizePixel = 0
+    row.AutoButtonColor = true
+    row.Text = "▶   " .. name
+    row.TextColor3 = C_TEXT
+    row.TextSize = 11
+    row.Font = Enum.Font.Gotham
+    row.TextXAlignment = Enum.TextXAlignment.Left
+    row.TextTruncate = Enum.TextTruncate.AtEnd
+    row.LayoutOrder = tonumber(entry.id) or 1
+    row.Parent = emoteResults
+    addCorner(row, 7)
+    local p = Instance.new("UIPadding")
+    p.PaddingLeft = UDim.new(0, 9)
+    p.PaddingRight = UDim.new(0, 7)
+    p.Parent = row
+
+    row.MouseButton1Click:Connect(function()
+        if emoteBusy then return end
+        if sourceMode == "UGC" then
+            local assetId = tonumber(entry.id)
+            if not assetId then setEmoteStatus("Invalid catalog asset", C_ERR) return end
+            local cached = ugcAnimationCache[assetId]
+            if cached then
+                playWiaEmote(cached, name)
+                return
+            end
+            emoteBusy = true
+            row.Text = "Loading animation..."
+            setEmoteStatus("Resolving UGC animation: " .. name .. "...")
+            task.spawn(function()
+                local animId
+                local ok = pcall(function()
+                    local endpoint = "https://assetdelivery.roblox.com/v1/assetId/" .. tostring(assetId)
+                    local delivery = HttpService:JSONDecode(game:HttpGet(endpoint))
+                    if delivery and delivery.location then
+                        local content = game:HttpGet(delivery.location)
+                        local raw = content:match("rbxassetid://(%d+)") or content:match("[?&]id=(%d+)")
+                        if raw then animId = "rbxassetid://" .. raw end
+                    end
+                end)
+                if ok and animId then
+                    ugcAnimationCache[assetId] = animId
+                    playWiaEmote(animId, name)
+                else
+                    setEmoteStatus("Couldn't resolve animation. It may be unavailable.", C_ERR)
+                end
+                if row and row.Parent then row.Text = "▶   " .. name end
+                emoteBusy = false
             end)
-            table.insert(emoteButtons, btn)
+        else
+            local animationId = entry.animationid or entry.animationId or entry.AnimationId
+            if not animationId and entry.id then animationId = entry.id end
+            if not playWiaEmote(animationId, name) then return end
+        end
+    end)
+end
+
+local function renderEmoteLibrary()
+    clearEmoteResults()
+    emotePrevious.Visible = false
+    emoteNext.Visible = false
+    local query = string.lower((emoteSearch.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    local count = 0
+    for _, entry in ipairs(emoteLibrary) do
+        local name = string.lower(tostring(entry.name or entry.title or ""))
+        if query == "" or string.find(name, query, 1, true) then
+            createEmoteResult(entry, "AFEM")
+            count += 1
         end
     end
+    setEmoteStatus(count > 0 and ("AFEM list · " .. count .. " emotes") or "No matching emotes", count > 0 and C_OK or C_DIM)
 end
 
-emoteSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    renderEmotes(emoteSearchBox.Text)
+local function loadEmoteLibrary()
+    setEmoteStatus("Loading AFEM list...")
+    task.spawn(function()
+        local decoded
+        local ok = pcall(function()
+            decoded = HttpService:JSONDecode(game:HttpGet(emoteLibraryUrl))
+        end)
+        if not ok or type(decoded) ~= "table" then
+            pcall(function() decoded = HttpService:JSONDecode(fallbackEmoteJson) end)
+        end
+        emoteLibrary = type(decoded) == "table" and decoded or {}
+        renderEmoteLibrary()
+    end)
+end
+
+local function getUgcEndpoint(query, cursor)
+    local url
+    if query ~= "" then
+        url = "https://catalog.roblox.com/v1/search/items/details?Category=12&SortType=Relevance&IncludeNotForSale=true&Limit=30&Keyword=" .. HttpService:UrlEncode(query)
+    else
+        url = "https://catalog.roblox.com/v1/search/items/details?Category=12&SortType=Updated&IncludeNotForSale=true&Limit=30"
+    end
+    if cursor and cursor ~= "" then url = url .. "&cursor=" .. HttpService:UrlEncode(cursor) end
+    return url
+end
+
+local function fetchUgcPage(reset, direction)
+    if emoteBusy then return end
+    if reset then
+        ugcQuery = emoteSearch.Text or ""
+        ugcCursorHistory = {""}
+        ugcCursorIndex = 1
+        ugcNextCursor = ""
+    elseif direction == "next" then
+        if not ugcHasNext or ugcNextCursor == "" then return end
+        ugcCursorIndex += 1
+        ugcCursorHistory[ugcCursorIndex] = ugcNextCursor
+    elseif direction == "previous" then
+        if ugcCursorIndex <= 1 then return end
+        ugcCursorIndex -= 1
+    end
+
+    emoteBusy = true
+    clearEmoteResults()
+    setEmoteStatus("Fetching Roblox UGC catalog...")
+    emotePrevious.Visible = ugcCursorIndex > 1
+    emoteNext.Visible = false
+
+    local cursor = ugcCursorHistory[ugcCursorIndex] or ""
+    task.spawn(function()
+        local decoded
+        local ok = pcall(function()
+            decoded = HttpService:JSONDecode(game:HttpGet(getUgcEndpoint(ugcQuery, cursor)))
+        end)
+        if not ok or type(decoded) ~= "table" then
+            setEmoteStatus("Catalog request failed", C_ERR)
+            emoteBusy = false
+            return
+        end
+        local items = decoded.data or {}
+        ugcNextCursor = decoded.nextPageCursor or ""
+        ugcHasNext = ugcNextCursor ~= ""
+        for _, entry in ipairs(items) do
+            if entry.id and entry.name then createEmoteResult(entry, "UGC") end
+        end
+        emotePrevious.Visible = ugcCursorIndex > 1
+        emoteNext.Visible = ugcHasNext
+        setEmoteStatus(#items > 0 and ("UGC catalog · page " .. ugcCursorIndex .. " · " .. #items .. " results") or "No emotes found", #items > 0 and C_OK or C_DIM)
+        emoteBusy = false
+    end)
+end
+
+emoteLibraryButton.MouseButton1Click:Connect(function()
+    emoteMode = "AFEM"
+    emoteLibraryButton.BackgroundColor3 = C_ACCENT
+    emoteUGCButton.BackgroundColor3 = C_ROW
+    emotePrevious.Visible = false
+    emoteNext.Visible = false
+    renderEmoteLibrary()
+end)
+emoteUGCButton.MouseButton1Click:Connect(function()
+    emoteMode = "UGC"
+    emoteUGCButton.BackgroundColor3 = C_ACCENT
+    emoteLibraryButton.BackgroundColor3 = C_ROW
+    fetchUgcPage(true)
+end)
+emoteSearchButton.MouseButton1Click:Connect(function()
+    if emoteMode == "UGC" then fetchUgcPage(true) else renderEmoteLibrary() end
+end)
+emoteSearch.FocusLost:Connect(function(enterPressed)
+    if not enterPressed then return end
+    if emoteMode == "UGC" then fetchUgcPage(true) else renderEmoteLibrary() end
+end)
+emotePrevious.MouseButton1Click:Connect(function()
+    if emoteMode == "UGC" then fetchUgcPage(false, "previous") end
+end)
+emoteNext.MouseButton1Click:Connect(function()
+    if emoteMode == "UGC" then fetchUgcPage(false, "next") end
 end)
 
-task.spawn(function()
-    local ok, data = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(
-            "https://raw.githubusercontent.com/Joystickplays/AFEM/refs/heads/main/emotes.json"
-        ))
-    end)
-    if ok and type(data) == "table" then
-        allUGCEmotes = data
-        renderEmotes("")
-        notify("Эмоции загружены: " .. #data, "success")
-    else
-        notify("Не удалось загрузить список эмоций", "error")
-    end
+local emoteStopButton = Instance.new("TextButton")
+emoteStopButton.Size = UDim2.new(0, 70, 0, 26)
+emoteStopButton.Position = UDim2.new(0.5, -35, 0, 298)
+emoteStopButton.Text = "STOP"
+emoteStopButton.TextColor3 = C_TEXT
+emoteStopButton.TextSize = 10
+emoteStopButton.Font = Enum.Font.GothamBold
+emoteStopButton.BackgroundColor3 = C_ROW_D
+emoteStopButton.BorderSizePixel = 0
+emoteStopButton.Parent = emotePanel
+addCorner(emoteStopButton, 7)
+emoteStopButton.MouseButton1Click:Connect(function()
+    if stopCurrentEmote() then setEmoteStatus("Emote stopped", C_OK) else setEmoteStatus("No emote is playing") end
 end)
+
+emoteLibraryButton.BackgroundColor3 = C_ACCENT
+loadEmoteLibrary()
 
 -- ========== TAB: WORLD ==========
 createTab("World")
@@ -2594,8 +2932,8 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-setStatus("WIA HUB v12.3 загружен", C_OK)
-notify("WIA HUB v12.3 готов", "success")
+setStatus("WIA HUB v12.2 загружен", C_OK)
+notify("WIA HUB v12.2 готов", "success")
 
 end -- main
 
