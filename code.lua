@@ -1,9 +1,6 @@
 -- ================================================================= --
--- WIA HUB v12.1 :: whitewia / tordark
--- FIX: лимит 200 local-переменных (do ... end блоки)
--- FIX: fovCircle создаётся
--- FIX: безопасный parent для GUI (gethui / CoreGui / PlayerGui)
--- FIX: ошибки запуска показываются в warn + уведомление
+-- WIA HUB v12.2 :: whitewia / tordark
+-- CHANGES: SP/STOP toggle + skeleton fix (Transparency + GetJoints)
 -- ================================================================= --
 
 local function main()
@@ -25,7 +22,6 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- безопасная установка родителя для GUI
 local function parentGui(gui)
     local ok = pcall(function()
         gui.Parent = (gethui and gethui()) or CoreGui
@@ -557,7 +553,7 @@ do
     WmTitle.Size = UDim2.new(1, -20, 0, 20)
     WmTitle.Position = UDim2.new(0, 14, 0, 4)
     WmTitle.BackgroundTransparency = 1
-    WmTitle.Text = "WIA HUB v12.1"
+    WmTitle.Text = "WIA HUB v12.2"
     WmTitle.TextColor3 = C_TEXT
     WmTitle.TextSize = 13
     WmTitle.Font = Enum.Font.GothamBold
@@ -1571,6 +1567,16 @@ local function setAimTarget(plr)
     end
 end
 
+-- === NEW: stopSpectate для toggle SP/STOP ===
+local function stopSpectate()
+    if not spectateTarget then return end
+    spectateTarget = nil
+    Camera.CameraType = Enum.CameraType.Custom
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then Camera.CameraSubject = hum end
+end
+
 ResetTargetBtn.MouseButton1Click:Connect(function()
     setAimTarget(nil)
     if updatePlayerList then updatePlayerList() end
@@ -1620,17 +1626,26 @@ updatePlayerList = function()
             nm.TextTruncate = Enum.TextTruncate.AtEnd
             nm.Parent = row
 
-            local spBtn = makeRowButton(row, "SP", -142, C_ROW_D)
+            -- === NEW: SP/STOP toggle ===
+            local isSpectating = (spectateTarget == plr)
+            local spBtn = makeRowButton(row, isSpectating and "STOP" or "SP", -142,
+                isSpectating and Color3.fromRGB(100, 45, 45) or C_ROW_D)
             local tpBtn = makeRowButton(row, "TP", -96, C_ROW_D)
             local aimBtn = makeRowButton(row, sel and "✓" or "AIM", -50,
                 sel and Color3.fromRGB(30, 100, 65) or C_ROW_D)
 
             spBtn.MouseButton1Click:Connect(function()
-                spectateTarget = plr
-                if freecamEnabled then
-                    toggleFreecam(false)
+                if spectateTarget == plr then
+                    stopSpectate()
+                    notify("Спектатор выключен")
+                else
+                    spectateTarget = plr
+                    if freecamEnabled then
+                        toggleFreecam(false)
+                    end
+                    notify("Спектатор: " .. plr.Name, "success")
                 end
-                notify("Спектатор: " .. plr.Name, "success")
+                updatePlayerList()
             end)
 
             tpBtn.MouseButton1Click:Connect(function()
@@ -1656,8 +1671,7 @@ end)
 Players.PlayerRemoving:Connect(function(plr)
     if aimbotSelectedTarget == plr then setAimTarget(nil) end
     if spectateTarget == plr then
-        spectateTarget = nil
-        Camera.CameraType = Enum.CameraType.Custom
+        stopSpectate()
     end
     task.defer(function()
         if playerListEnabled then updatePlayerList() end
@@ -1792,7 +1806,7 @@ local skeletonSelfTest = false
 RunService.RenderStepped:Connect(function()
     if not Drawing then return end
 
-    -- ===== SKELETON =====
+    -- ===== SKELETON (fixed: GetJoints + Transparency=1 + Thickness=2 + skip zero-len) =====
     if skeletonEnabled then
         local idx = 0
         for _, plr in pairs(Players:GetPlayers()) do
@@ -1800,18 +1814,23 @@ RunService.RenderStepped:Connect(function()
             if valid and plr.Character then
                 local isTeammate = teamCheckEnabled and plr.Team == LocalPlayer.Team and plr ~= LocalPlayer
                 if not isTeammate then
-                    for _, joint in ipairs(plr.Character:GetDescendants()) do
+                    local joints = plr.Character:GetJoints()
+                    for _, joint in ipairs(joints) do
                         if joint:IsA("Motor6D") and joint.Part0 and joint.Part1 then
                             local p0 = Camera:WorldToViewportPoint(joint.Part0.Position)
                             local p1 = Camera:WorldToViewportPoint(joint.Part1.Position)
                             if p0.Z > 0 and p1.Z > 0 then
-                                idx = idx + 1
-                                local line = getLine(skelPool, idx)
-                                line.From = Vector2.new(p0.X, p0.Y)
-                                line.To = Vector2.new(p1.X, p1.Y)
-                                line.Color = skeletonColor
-                                line.Thickness = 1.5
-                                line.Transparency = 0.15
+                                local v0 = Vector2.new(p0.X, p0.Y)
+                                local v1 = Vector2.new(p1.X, p1.Y)
+                                if (v1 - v0).Magnitude > 0.5 then
+                                    idx = idx + 1
+                                    local line = getLine(skelPool, idx)
+                                    line.From = v0
+                                    line.To = v1
+                                    line.Color = skeletonColor
+                                    line.Thickness = 2
+                                    line.Transparency = 1
+                                end
                             end
                         end
                     end
@@ -2140,11 +2159,8 @@ createSection("Wall Run / Freecam / Spectate")
 createTumbler("Wall Run", false).onToggle(function(st) wallRunEnabled = st end)
 createTumbler("Freecam", false).onToggle(function(st) toggleFreecam(st) end)
 createButton("Спектатор: сброс", function()
-    spectateTarget = nil
-    Camera.CameraType = Enum.CameraType.Custom
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then Camera.CameraSubject = hum end
+    stopSpectate()
+    if playerListEnabled then updatePlayerList() end
     notify("Спектатор сброшен")
 end)
 
@@ -2456,8 +2472,8 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-setStatus("WIA HUB v12.1 загружен", C_OK)
-notify("WIA HUB v12.1 готов", "success")
+setStatus("WIA HUB v12.2 загружен", C_OK)
+notify("WIA HUB v12.2 готов", "success")
 
 end -- main
 
