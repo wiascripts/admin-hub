@@ -1,8 +1,12 @@
 -- ================================================================= --
--- WIA HUB v12.0 :: whitewia / tordark
--- Fixed: Animations (user's PACKS) + ESP Color + Skeleton + Korblox
---        Spectate + Item ESP + SP button visibility
+-- WIA HUB v12.1 :: whitewia / tordark
+-- FIX: лимит 200 local-переменных (do ... end блоки)
+-- FIX: fovCircle создаётся
+-- FIX: безопасный parent для GUI (gethui / CoreGui / PlayerGui)
+-- FIX: ошибки запуска показываются в warn + уведомление
 -- ================================================================= --
+
+local function main()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,6 +24,16 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
+
+-- безопасная установка родителя для GUI
+local function parentGui(gui)
+    local ok = pcall(function()
+        gui.Parent = (gethui and gethui()) or CoreGui
+    end)
+    if not ok or not gui.Parent then
+        gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+end
 
 -- ========== COLORS ==========
 local C_BG = Color3.fromRGB(18, 18, 24)
@@ -41,63 +55,66 @@ local function addCorner(obj, r)
 end
 
 -- ========== NOTIFICATIONS ==========
-local NotifGui = Instance.new("ScreenGui")
-NotifGui.Name = "WiaNotifs"
-NotifGui.ResetOnSpawn = false
-NotifGui.DisplayOrder = 200
-NotifGui.Parent = CoreGui
+local notify
+do
+    local NotifGui = Instance.new("ScreenGui")
+    NotifGui.Name = "WiaNotifs"
+    NotifGui.ResetOnSpawn = false
+    NotifGui.DisplayOrder = 200
+    parentGui(NotifGui)
 
-local NotifHolder = Instance.new("Frame")
-NotifHolder.Size = UDim2.new(0, 260, 0, 400)
-NotifHolder.Position = UDim2.new(1, -272, 0, 20)
-NotifHolder.BackgroundTransparency = 1
-NotifHolder.Parent = NotifGui
+    local NotifHolder = Instance.new("Frame")
+    NotifHolder.Size = UDim2.new(0, 260, 0, 400)
+    NotifHolder.Position = UDim2.new(1, -272, 0, 20)
+    NotifHolder.BackgroundTransparency = 1
+    NotifHolder.Parent = NotifGui
 
-local NL = Instance.new("UIListLayout")
-NL.Padding = UDim.new(0, 8)
-NL.SortOrder = Enum.SortOrder.LayoutOrder
-NL.Parent = NotifHolder
+    local NL = Instance.new("UIListLayout")
+    NL.Padding = UDim.new(0, 8)
+    NL.SortOrder = Enum.SortOrder.LayoutOrder
+    NL.Parent = NotifHolder
 
-local nOrder = 0
-local function notify(text, kind)
-    nOrder = nOrder + 1
-    local col = kind == "error" and C_ERR or kind == "success" and C_OK or C_ACCENT
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, 46)
-    f.BackgroundColor3 = C_PANEL
-    f.BorderSizePixel = 0
-    f.LayoutOrder = nOrder
-    f.ClipsDescendants = true
-    f.Parent = NotifHolder
-    addCorner(f, 10)
-    local a = Instance.new("Frame")
-    a.Size = UDim2.new(0, 3, 1, 0)
-    a.BackgroundColor3 = col
-    a.BorderSizePixel = 0
-    a.Parent = f
-    addCorner(a, 2)
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(1, -22, 1, 0)
-    l.Position = UDim2.new(0, 14, 0, 0)
-    l.BackgroundTransparency = 1
-    l.Text = text
-    l.TextColor3 = C_TEXT
-    l.TextSize = 13
-    l.Font = Enum.Font.Gotham
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.TextWrapped = true
-    l.Parent = f
-    local s = Instance.new("UIScale")
-    s.Scale = 0.85
-    s.Parent = f
-    TweenService:Create(s, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-    task.delay(2.6, function()
-        TweenService:Create(f, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
-        TweenService:Create(l, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
-        TweenService:Create(a, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
-        task.wait(0.3)
-        f:Destroy()
-    end)
+    local nOrder = 0
+    notify = function(text, kind)
+        nOrder = nOrder + 1
+        local col = kind == "error" and C_ERR or kind == "success" and C_OK or C_ACCENT
+        local f = Instance.new("Frame")
+        f.Size = UDim2.new(1, 0, 0, 46)
+        f.BackgroundColor3 = C_PANEL
+        f.BorderSizePixel = 0
+        f.LayoutOrder = nOrder
+        f.ClipsDescendants = true
+        f.Parent = NotifHolder
+        addCorner(f, 10)
+        local a = Instance.new("Frame")
+        a.Size = UDim2.new(0, 3, 1, 0)
+        a.BackgroundColor3 = col
+        a.BorderSizePixel = 0
+        a.Parent = f
+        addCorner(a, 2)
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1, -22, 1, 0)
+        l.Position = UDim2.new(0, 14, 0, 0)
+        l.BackgroundTransparency = 1
+        l.Text = text
+        l.TextColor3 = C_TEXT
+        l.TextSize = 13
+        l.Font = Enum.Font.Gotham
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.TextWrapped = true
+        l.Parent = f
+        local s = Instance.new("UIScale")
+        s.Scale = 0.85
+        s.Parent = f
+        TweenService:Create(s, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+        task.delay(2.6, function()
+            TweenService:Create(f, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+            TweenService:Create(l, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+            TweenService:Create(a, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+            task.wait(0.3)
+            f:Destroy()
+        end)
+    end
 end
 
 -- ========== STATE ==========
@@ -158,263 +175,266 @@ local waitingHubBind = false
 
 local headlessEnabled, korbloxEnabled = false, false
 
--- ========== ANIMATION PACKS (user's working version) ==========
-local PACKS = {
-    ["Adidas Sports"] = {
-        WalkAnim = 18537392113, RunAnim = 18537384940, JumpAnim = 18537380791,
-        FallAnim = 18537367238, SwimIdle = 18537387180, Swim = 18537389531,
-        Animation1 = 18537376492, Animation2 = 18537371272, ClimbAnim = 18537363391,
-    },
-    ["Adidas Community"] = {
-        WalkAnim = 122150855457006, RunAnim = 82598234841035, JumpAnim = 75290611992385,
-        FallAnim = 98600215928904, SwimIdle = 109346520324160, Swim = 133308483266208,
-        Animation1 = 122257458498464, Animation2 = 102357151005774, ClimbAnim = 88763136693023,
-    },
-    ["Adidas Aura"] = {
-        WalkAnim = 83842218823011, RunAnim = 118320322718866, JumpAnim = 109996626521204,
-        FallAnim = 95603166884636, SwimIdle = 94922130551805, Swim = 134530128383903,
-        Animation1 = 110211186840347, Animation2 = 114191137265065, ClimbAnim = 97824616490448,
-    },
-    ["Wicked Popular"] = {
-        WalkAnim = 92072849924640, RunAnim = 72301599441680, JumpAnim = 104325245285198,
-        FallAnim = 121152442762481, Animation1 = 118832222982049, ClimbAnim = 131326830509784,
-        SwimIdle = 113199415118199, Swim = 99384245425157, Animation2 = 76049494037641,
-    },
-    Elder = {
-        WalkAnim = 10921111375, RunAnim = 10921104374, JumpAnim = 10921107367,
-        FallAnim = 10921105765, SwimIdle = 10921110146, Swim = 10921108971,
-        ClimbAnim = 10921100400, Animation1 = 10921101664, Animation2 = 10921102574,
-    },
-    Zombie = {
-        WalkAnim = 10921355261, RunAnim = 616163682, JumpAnim = 10921351278,
-        FallAnim = 10921350320, SwimIdle = 10921353442, Swim = 10921352344,
-        Animation1 = 10921344533, Animation2 = 10921345304, ClimbAnim = 10921343576,
-    },
-    Mage = {
-        WalkAnim = 10921152678, RunAnim = 10921148209, JumpAnim = 10921149743,
-        FallAnim = 10921148939, SwimIdle = 10921151661, Swim = 10921150788,
-        ClimbAnim = 10921143404, Animation1 = 10921144709, Animation2 = 10921145797,
-    },
-    ["Catwalk Glam"] = {
-        WalkAnim = 109168724482748, RunAnim = 81024476153754, JumpAnim = 116936326516985,
-        FallAnim = 92294537340807, SwimIdle = 98854111361360, Swim = 134591743181628,
-        ClimbAnim = 119377220967554, Animation1 = 133806214992291, Animation2 = 94970088341563,
-    },
-    Astronaut = {
-        WalkAnim = 10921046031, RunAnim = 10921039308, JumpAnim = 10921042494,
-        FallAnim = 10921040576, SwimIdle = 10921045006, Swim = 10921044000,
-        ClimbAnim = 10921032124, Animation1 = 10921034824, Animation2 = 10921036806,
-    },
-    ['Wicked "Dancing Through Life"'] = {
-        WalkAnim = 73718308412641, RunAnim = 135515454877967, JumpAnim = 78508480717326,
-        FallAnim = 78147885297412, SwimIdle = 129183123083281, Swim = 110657013921774,
-        ClimbAnim = 129447497744818, Animation1 = 92849173543269, Animation2 = 132238900951109,
-    },
-    Werewolf = {
-        WalkAnim = 10921342074, RunAnim = 10921336997, JumpAnim = nil,
-        FallAnim = 10921337907, SwimIdle = 10921341319, Swim = 10921340419,
-        ClimbAnim = 10921329322, Animation1 = 10921330408, Animation2 = 10921333667,
-    },
-    Superhero = {
-        WalkAnim = 10921298616, RunAnim = 10921291831, JumpAnim = 10921294559,
-        FallAnim = 10921293373, SwimIdle = 10921297391, Swim = 10921295495,
-        ClimbAnim = 10921286911, Animation1 = 10921288909, Animation2 = 10921290167,
-    },
-    Toy = {
-        WalkAnim = 10921312010, RunAnim = 10921306285, JumpAnim = 10921308158,
-        FallAnim = 10921307241, SwimIdle = 10921310341, Swim = 10921309319,
-        ClimbAnim = 10921300839, Animation1 = 10921301576, Animation2 = nil,
-    },
-    ["No Boundaries"] = {
-        WalkAnim = 18747074203, RunAnim = 18747070484, JumpAnim = 18747069148,
-        FallAnim = 18747062535, SwimIdle = 18747071682, Swim = 18747073181,
-        ClimbAnim = 18747060903, Animation1 = 18747067405, Animation2 = 18747063918,
-    },
-    NFL = {
-        WalkAnim = 110358958299415, RunAnim = 117333533048078, JumpAnim = 119846112151352,
-        FallAnim = 129773241321032, SwimIdle = 79090109939093, Swim = 132697394189921,
-        ClimbAnim = 134630013742019, Animation1 = 92080889861410, Animation2 = 74451233229259,
-    },
-    ["Amazon Unboxed"] = {
-        WalkAnim = 90478085024465, RunAnim = 134824450619865, JumpAnim = 121454505477205,
-        FallAnim = 94788218468396, SwimIdle = 129126268464847, Swim = 105962919001086,
-        ClimbAnim = 121145883950231, Animation1 = 98281136301627, Animation2 = nil,
-    },
-    Vampire = {
-        WalkAnim = 10921326949, RunAnim = 10921320299, JumpAnim = 10921322186,
-        FallAnim = 10921321317, SwimIdle = 10921325443, Swim = 10921324408,
-        ClimbAnim = 10921314188, Animation1 = 10921315373, Animation2 = nil,
-    },
-    Ninja = {
-        Run=656118852, Walk=656121766, Jump=656117878, Fall=656115606,
-        Swim=656119721, SwimIdle=656121397, Climb=656114359,
-        Idle={656117400,656118341,886742569}
-    },
-    Robot = {
-        Run=616091570, Walk=616095330, Jump=616090535, Fall=616087089,
-        Swim=616092998, SwimIdle=616094091, Climb=616086039,
-        Idle={616088211,616089559,885531463}
-    },
-    Levitation = {
-        Run=616010382, Walk=616013216, Jump=616008936, Fall=616005863,
-        Swim=616011509, SwimIdle=616012453, Climb=616003713,
-        Idle={616006778,616008087,886862142}
-    },
-    Stylish = {
-        Run=616140816, Walk=616146177, Jump=616139451, Fall=616134815,
-        Swim=616143378, SwimIdle=616144772, Climb=616133594,
-        Idle={616136790,616138447,886888594}
-    },
-    Bubbly = {
-        Run=910025107, Walk=910034870, Jump=910016857, Fall=910001910,
-        Swim=910028158, SwimIdle=910030921, Climb=909997997,
-        Idle={910004836,910009958,1018536639}
-    },
-    Cartoon = {
-        Run=742638842, Walk=742640026, Jump=742637942, Fall=742637151,
-        Swim=742639220, SwimIdle=742639812, Climb=742636889,
-        Idle={742637544,742638445,885477856}
-    },
-}
+-- ========== ANIMATION PACKS ==========
+local PACKS, applyPack
+do
+    PACKS = {
+        ["Adidas Sports"] = {
+            WalkAnim = 18537392113, RunAnim = 18537384940, JumpAnim = 18537380791,
+            FallAnim = 18537367238, SwimIdle = 18537387180, Swim = 18537389531,
+            Animation1 = 18537376492, Animation2 = 18537371272, ClimbAnim = 18537363391,
+        },
+        ["Adidas Community"] = {
+            WalkAnim = 122150855457006, RunAnim = 82598234841035, JumpAnim = 75290611992385,
+            FallAnim = 98600215928904, SwimIdle = 109346520324160, Swim = 133308483266208,
+            Animation1 = 122257458498464, Animation2 = 102357151005774, ClimbAnim = 88763136693023,
+        },
+        ["Adidas Aura"] = {
+            WalkAnim = 83842218823011, RunAnim = 118320322718866, JumpAnim = 109996626521204,
+            FallAnim = 95603166884636, SwimIdle = 94922130551805, Swim = 134530128383903,
+            Animation1 = 110211186840347, Animation2 = 114191137265065, ClimbAnim = 97824616490448,
+        },
+        ["Wicked Popular"] = {
+            WalkAnim = 92072849924640, RunAnim = 72301599441680, JumpAnim = 104325245285198,
+            FallAnim = 121152442762481, Animation1 = 118832222982049, ClimbAnim = 131326830509784,
+            SwimIdle = 113199415118199, Swim = 99384245425157, Animation2 = 76049494037641,
+        },
+        Elder = {
+            WalkAnim = 10921111375, RunAnim = 10921104374, JumpAnim = 10921107367,
+            FallAnim = 10921105765, SwimIdle = 10921110146, Swim = 10921108971,
+            ClimbAnim = 10921100400, Animation1 = 10921101664, Animation2 = 10921102574,
+        },
+        Zombie = {
+            WalkAnim = 10921355261, RunAnim = 616163682, JumpAnim = 10921351278,
+            FallAnim = 10921350320, SwimIdle = 10921353442, Swim = 10921352344,
+            Animation1 = 10921344533, Animation2 = 10921345304, ClimbAnim = 10921343576,
+        },
+        Mage = {
+            WalkAnim = 10921152678, RunAnim = 10921148209, JumpAnim = 10921149743,
+            FallAnim = 10921148939, SwimIdle = 10921151661, Swim = 10921150788,
+            ClimbAnim = 10921143404, Animation1 = 10921144709, Animation2 = 10921145797,
+        },
+        ["Catwalk Glam"] = {
+            WalkAnim = 109168724482748, RunAnim = 81024476153754, JumpAnim = 116936326516985,
+            FallAnim = 92294537340807, SwimIdle = 98854111361360, Swim = 134591743181628,
+            ClimbAnim = 119377220967554, Animation1 = 133806214992291, Animation2 = 94970088341563,
+        },
+        Astronaut = {
+            WalkAnim = 10921046031, RunAnim = 10921039308, JumpAnim = 10921042494,
+            FallAnim = 10921040576, SwimIdle = 10921045006, Swim = 10921044000,
+            ClimbAnim = 10921032124, Animation1 = 10921034824, Animation2 = 10921036806,
+        },
+        ['Wicked "Dancing Through Life"'] = {
+            WalkAnim = 73718308412641, RunAnim = 135515454877967, JumpAnim = 78508480717326,
+            FallAnim = 78147885297412, SwimIdle = 129183123083281, Swim = 110657013921774,
+            ClimbAnim = 129447497744818, Animation1 = 92849173543269, Animation2 = 132238900951109,
+        },
+        Werewolf = {
+            WalkAnim = 10921342074, RunAnim = 10921336997, JumpAnim = nil,
+            FallAnim = 10921337907, SwimIdle = 10921341319, Swim = 10921340419,
+            ClimbAnim = 10921329322, Animation1 = 10921330408, Animation2 = 10921333667,
+        },
+        Superhero = {
+            WalkAnim = 10921298616, RunAnim = 10921291831, JumpAnim = 10921294559,
+            FallAnim = 10921293373, SwimIdle = 10921297391, Swim = 10921295495,
+            ClimbAnim = 10921286911, Animation1 = 10921288909, Animation2 = 10921290167,
+        },
+        Toy = {
+            WalkAnim = 10921312010, RunAnim = 10921306285, JumpAnim = 10921308158,
+            FallAnim = 10921307241, SwimIdle = 10921310341, Swim = 10921309319,
+            ClimbAnim = 10921300839, Animation1 = 10921301576, Animation2 = nil,
+        },
+        ["No Boundaries"] = {
+            WalkAnim = 18747074203, RunAnim = 18747070484, JumpAnim = 18747069148,
+            FallAnim = 18747062535, SwimIdle = 18747071682, Swim = 18747073181,
+            ClimbAnim = 18747060903, Animation1 = 18747067405, Animation2 = 18747063918,
+        },
+        NFL = {
+            WalkAnim = 110358958299415, RunAnim = 117333533048078, JumpAnim = 119846112151352,
+            FallAnim = 129773241321032, SwimIdle = 79090109939093, Swim = 132697394189921,
+            ClimbAnim = 134630013742019, Animation1 = 92080889861410, Animation2 = 74451233229259,
+        },
+        ["Amazon Unboxed"] = {
+            WalkAnim = 90478085024465, RunAnim = 134824450619865, JumpAnim = 121454505477205,
+            FallAnim = 94788218468396, SwimIdle = 129126268464847, Swim = 105962919001086,
+            ClimbAnim = 121145883950231, Animation1 = 98281136301627, Animation2 = nil,
+        },
+        Vampire = {
+            WalkAnim = 10921326949, RunAnim = 10921320299, JumpAnim = 10921322186,
+            FallAnim = 10921321317, SwimIdle = 10921325443, Swim = 10921324408,
+            ClimbAnim = 10921314188, Animation1 = 10921315373, Animation2 = nil,
+        },
+        Ninja = {
+            Run=656118852, Walk=656121766, Jump=656117878, Fall=656115606,
+            Swim=656119721, SwimIdle=656121397, Climb=656114359,
+            Idle={656117400,656118341,886742569}
+        },
+        Robot = {
+            Run=616091570, Walk=616095330, Jump=616090535, Fall=616087089,
+            Swim=616092998, SwimIdle=616094091, Climb=616086039,
+            Idle={616088211,616089559,885531463}
+        },
+        Levitation = {
+            Run=616010382, Walk=616013216, Jump=616008936, Fall=616005863,
+            Swim=616011509, SwimIdle=616012453, Climb=616003713,
+            Idle={616006778,616008087,886862142}
+        },
+        Stylish = {
+            Run=616140816, Walk=616146177, Jump=616139451, Fall=616134815,
+            Swim=616143378, SwimIdle=616144772, Climb=616133594,
+            Idle={616136790,616138447,886888594}
+        },
+        Bubbly = {
+            Run=910025107, Walk=910034870, Jump=910016857, Fall=910001910,
+            Swim=910028158, SwimIdle=910030921, Climb=909997997,
+            Idle={910004836,910009958,1018536639}
+        },
+        Cartoon = {
+            Run=742638842, Walk=742640026, Jump=742637942, Fall=742637151,
+            Swim=742639220, SwimIdle=742639812, Climb=742636889,
+            Idle={742637544,742638445,885477856}
+        },
+    }
 
-local ATTR_LAST = "AnimPack_Last"
-local applyingAnim = false
+    local ATTR_LAST = "AnimPack_Last"
+    local applyingAnim = false
 
-local function waitForAnimate(char)
-    for _ = 1, 40 do
-        local a = char:FindFirstChild("Animate")
-        if a and a:FindFirstChild("idle") and a:FindFirstChild("run") and a:FindFirstChild("walk") then
-            return a
+    local function waitForAnimate(char)
+        for _ = 1, 40 do
+            local a = char:FindFirstChild("Animate")
+            if a and a:FindFirstChild("idle") and a:FindFirstChild("run") and a:FindFirstChild("walk") then
+                return a
+            end
+            task.wait(0.1)
         end
-        task.wait(0.1)
-    end
-    return nil
-end
-
-local function setAnim(animObj, id)
-    if animObj and id then
-        animObj.AnimationId = "rbxassetid://" .. tostring(id)
-    end
-end
-
-local function stopAllTracks(hum)
-    if not hum then return end
-    for _, t in ipairs(hum:GetPlayingAnimationTracks()) do
-        pcall(function() t:Stop(0) end)
-    end
-end
-
-local function ensureAnim(folder, name)
-    if not folder then return nil end
-    local a = folder:FindFirstChild(name)
-    if not a then
-        a = Instance.new("Animation")
-        a.Name = name
-        a.Parent = folder
-    end
-    return a
-end
-
-local function ensureIdleSlots(idleFolder, n)
-    if not idleFolder then return end
-    n = n or 2
-    for i = 1, n do
-        ensureAnim(idleFolder, "Animation" .. i)
-    end
-end
-
-local function pick(pack, ...)
-    for i = 1, select("#", ...) do
-        local k = select(i, ...)
-        local v = pack[k]
-        if v ~= nil then return v end
-    end
-    return nil
-end
-
-local function applyPack(packName)
-    if applyingAnim then return false end
-    applyingAnim = true
-
-    local pack = PACKS[packName]
-    if not pack then
-        applyingAnim = false
-        return false
+        return nil
     end
 
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local animate = waitForAnimate(char)
-    if not animate then
-        applyingAnim = false
-        notify("Animate не найден", "error")
-        return false
+    local function setAnim(animObj, id)
+        if animObj and id then
+            animObj.AnimationId = "rbxassetid://" .. tostring(id)
+        end
     end
 
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    stopAllTracks(hum)
+    local function stopAllTracks(hum)
+        if not hum then return end
+        for _, t in ipairs(hum:GetPlayingAnimationTracks()) do
+            pcall(function() t:Stop(0) end)
+        end
+    end
 
-    local runObj = ensureAnim(animate:FindFirstChild("run"), "RunAnim")
-    local walkObj = ensureAnim(animate:FindFirstChild("walk"), "WalkAnim")
-    local jumpObj = ensureAnim(animate:FindFirstChild("jump"), "JumpAnim")
-    local fallObj = ensureAnim(animate:FindFirstChild("fall"), "FallAnim")
-    local climbObj = ensureAnim(animate:FindFirstChild("climb"), "ClimbAnim")
-    local swimObj = ensureAnim(animate:FindFirstChild("swim"), "Swim")
-    local swimIdleObj = ensureAnim(animate:FindFirstChild("swimidle"), "SwimIdle")
-    local idleFolder = animate:FindFirstChild("idle")
+    local function ensureAnim(folder, name)
+        if not folder then return nil end
+        local a = folder:FindFirstChild(name)
+        if not a then
+            a = Instance.new("Animation")
+            a.Name = name
+            a.Parent = folder
+        end
+        return a
+    end
 
-    setAnim(walkObj, pick(pack, "WalkAnim", "Walk"))
-    setAnim(runObj, pick(pack, "RunAnim", "Run"))
-    setAnim(jumpObj, pick(pack, "JumpAnim", "Jump"))
-    setAnim(fallObj, pick(pack, "FallAnim", "Fall"))
-    setAnim(climbObj, pick(pack, "ClimbAnim", "Climb"))
-    setAnim(swimObj, pick(pack, "Swim"))
-    setAnim(swimIdleObj, pick(pack, "SwimIdle") or pick(pack, "Swim"))
+    local function ensureIdleSlots(idleFolder, n)
+        if not idleFolder then return end
+        n = n or 2
+        for i = 1, n do
+            ensureAnim(idleFolder, "Animation" .. i)
+        end
+    end
 
-    if idleFolder then
-        local a1 = pick(pack, "Animation1")
-        local a2 = pick(pack, "Animation2")
-        if a1 or a2 then
-            ensureIdleSlots(idleFolder, 2)
-            local id1 = a1 or a2
-            local id2 = a2 or a1 or id1
-            setAnim(idleFolder:FindFirstChild("Animation1"), id1)
-            setAnim(idleFolder:FindFirstChild("Animation2"), id2)
-        elseif pack.Idle and #pack.Idle > 0 then
-            ensureIdleSlots(idleFolder, math.max(2, #pack.Idle))
-            setAnim(idleFolder:FindFirstChild("Animation1"), pack.Idle[1])
-            setAnim(idleFolder:FindFirstChild("Animation2"), pack.Idle[2] or pack.Idle[1])
-            for i = 3, #pack.Idle do
-                local a = idleFolder:FindFirstChild("Animation" .. i)
-                if a then setAnim(a, pack.Idle[i]) end
+    local function pick(pack, ...)
+        for i = 1, select("#", ...) do
+            local k = select(i, ...)
+            local v = pack[k]
+            if v ~= nil then return v end
+        end
+        return nil
+    end
+
+    applyPack = function(packName)
+        if applyingAnim then return false end
+        applyingAnim = true
+
+        local pack = PACKS[packName]
+        if not pack then
+            applyingAnim = false
+            return false
+        end
+
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local animate = waitForAnimate(char)
+        if not animate then
+            applyingAnim = false
+            notify("Animate не найден", "error")
+            return false
+        end
+
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        stopAllTracks(hum)
+
+        local runObj = ensureAnim(animate:FindFirstChild("run"), "RunAnim")
+        local walkObj = ensureAnim(animate:FindFirstChild("walk"), "WalkAnim")
+        local jumpObj = ensureAnim(animate:FindFirstChild("jump"), "JumpAnim")
+        local fallObj = ensureAnim(animate:FindFirstChild("fall"), "FallAnim")
+        local climbObj = ensureAnim(animate:FindFirstChild("climb"), "ClimbAnim")
+        local swimObj = ensureAnim(animate:FindFirstChild("swim"), "Swim")
+        local swimIdleObj = ensureAnim(animate:FindFirstChild("swimidle"), "SwimIdle")
+        local idleFolder = animate:FindFirstChild("idle")
+
+        setAnim(walkObj, pick(pack, "WalkAnim", "Walk"))
+        setAnim(runObj, pick(pack, "RunAnim", "Run"))
+        setAnim(jumpObj, pick(pack, "JumpAnim", "Jump"))
+        setAnim(fallObj, pick(pack, "FallAnim", "Fall"))
+        setAnim(climbObj, pick(pack, "ClimbAnim", "Climb"))
+        setAnim(swimObj, pick(pack, "Swim"))
+        setAnim(swimIdleObj, pick(pack, "SwimIdle") or pick(pack, "Swim"))
+
+        if idleFolder then
+            local a1 = pick(pack, "Animation1")
+            local a2 = pick(pack, "Animation2")
+            if a1 or a2 then
+                ensureIdleSlots(idleFolder, 2)
+                local id1 = a1 or a2
+                local id2 = a2 or a1 or id1
+                setAnim(idleFolder:FindFirstChild("Animation1"), id1)
+                setAnim(idleFolder:FindFirstChild("Animation2"), id2)
+            elseif pack.Idle and #pack.Idle > 0 then
+                ensureIdleSlots(idleFolder, math.max(2, #pack.Idle))
+                setAnim(idleFolder:FindFirstChild("Animation1"), pack.Idle[1])
+                setAnim(idleFolder:FindFirstChild("Animation2"), pack.Idle[2] or pack.Idle[1])
+                for i = 3, #pack.Idle do
+                    local a = idleFolder:FindFirstChild("Animation" .. i)
+                    if a then setAnim(a, pack.Idle[i]) end
+                end
             end
         end
+
+        animate.Disabled = true
+        task.wait(0.06)
+        animate.Disabled = false
+
+        if hum then
+            pcall(function()
+                hum:ChangeState(Enum.HumanoidStateType.Landed)
+                task.wait(0.03)
+                hum:ChangeState(Enum.HumanoidStateType.Running)
+            end)
+        end
+
+        pcall(function() LocalPlayer:SetAttribute(ATTR_LAST, packName) end)
+        applyingAnim = false
+        notify("Анимация: " .. packName, "success")
+        return true
     end
 
-    animate.Disabled = true
-    task.wait(0.06)
-    animate.Disabled = false
-
-    if hum then
-        pcall(function()
-            hum:ChangeState(Enum.HumanoidStateType.Landed)
-            task.wait(0.03)
-            hum:ChangeState(Enum.HumanoidStateType.Running)
-        end)
-    end
-
-    pcall(function() LocalPlayer:SetAttribute(ATTR_LAST, packName) end)
-    applyingAnim = false
-    notify("Анимация: " .. packName, "success")
-    return true
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(0.6)
+        local saved = LocalPlayer:GetAttribute(ATTR_LAST)
+        if type(saved) == "string" and saved ~= "" and PACKS[saved] then
+            applyPack(saved)
+        end
+    end)
 end
-
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.6)
-    local saved = LocalPlayer:GetAttribute(ATTR_LAST)
-    if type(saved) == "string" and saved ~= "" and PACKS[saved] then
-        applyPack(saved)
-    end
-end)
 
 -- ========== COSMETICS ==========
 local function applyHeadless()
@@ -503,178 +523,184 @@ local function removeCosmetics()
 end
 
 -- ========== WATERMARK ==========
-local WmGui = Instance.new("ScreenGui")
-WmGui.Name = "WiaWm"
-WmGui.ResetOnSpawn = false
-WmGui.DisplayOrder = 50
-WmGui.Parent = CoreGui
+local WmGui
+do
+    WmGui = Instance.new("ScreenGui")
+    WmGui.Name = "WiaWm"
+    WmGui.ResetOnSpawn = false
+    WmGui.DisplayOrder = 50
+    parentGui(WmGui)
 
-local Wm = Instance.new("Frame")
-Wm.Size = UDim2.new(0, 250, 0, 44)
-Wm.Position = UDim2.new(0, 12, 0, 12)
-Wm.BackgroundColor3 = C_PANEL
-Wm.BackgroundTransparency = 0.15
-Wm.BorderSizePixel = 0
-Wm.Parent = WmGui
-addCorner(Wm, 10)
+    local Wm = Instance.new("Frame")
+    Wm.Size = UDim2.new(0, 250, 0, 44)
+    Wm.Position = UDim2.new(0, 12, 0, 12)
+    Wm.BackgroundColor3 = C_PANEL
+    Wm.BackgroundTransparency = 0.15
+    Wm.BorderSizePixel = 0
+    Wm.Parent = WmGui
+    addCorner(Wm, 10)
 
-local WmStroke = Instance.new("UIStroke")
-WmStroke.Color = C_STROKE
-WmStroke.Thickness = 1
-WmStroke.Transparency = 0.3
-WmStroke.Parent = Wm
+    local WmStroke = Instance.new("UIStroke")
+    WmStroke.Color = C_STROKE
+    WmStroke.Thickness = 1
+    WmStroke.Transparency = 0.3
+    WmStroke.Parent = Wm
 
-local WmAccent = Instance.new("Frame")
-WmAccent.Size = UDim2.new(0, 3, 1, 0)
-WmAccent.BackgroundColor3 = C_ACCENT
-WmAccent.BorderSizePixel = 0
-WmAccent.Parent = Wm
-addCorner(WmAccent, 2)
+    local WmAccent = Instance.new("Frame")
+    WmAccent.Size = UDim2.new(0, 3, 1, 0)
+    WmAccent.BackgroundColor3 = C_ACCENT
+    WmAccent.BorderSizePixel = 0
+    WmAccent.Parent = Wm
+    addCorner(WmAccent, 2)
 
-local WmTitle = Instance.new("TextLabel")
-WmTitle.Size = UDim2.new(1, -20, 0, 20)
-WmTitle.Position = UDim2.new(0, 14, 0, 4)
-WmTitle.BackgroundTransparency = 1
-WmTitle.Text = "WIA HUB v12.0"
-WmTitle.TextColor3 = C_TEXT
-WmTitle.TextSize = 13
-WmTitle.Font = Enum.Font.GothamBold
-WmTitle.TextXAlignment = Enum.TextXAlignment.Left
-WmTitle.Parent = Wm
+    local WmTitle = Instance.new("TextLabel")
+    WmTitle.Size = UDim2.new(1, -20, 0, 20)
+    WmTitle.Position = UDim2.new(0, 14, 0, 4)
+    WmTitle.BackgroundTransparency = 1
+    WmTitle.Text = "WIA HUB v12.1"
+    WmTitle.TextColor3 = C_TEXT
+    WmTitle.TextSize = 13
+    WmTitle.Font = Enum.Font.GothamBold
+    WmTitle.TextXAlignment = Enum.TextXAlignment.Left
+    WmTitle.Parent = Wm
 
-local WmStats = Instance.new("TextLabel")
-WmStats.Size = UDim2.new(1, -20, 0, 16)
-WmStats.Position = UDim2.new(0, 14, 0, 23)
-WmStats.BackgroundTransparency = 1
-WmStats.Text = "60 FPS  ·  0 ms  ·  " .. LocalPlayer.Name
-WmStats.TextColor3 = C_DIM
-WmStats.TextSize = 11
-WmStats.Font = Enum.Font.Gotham
-WmStats.TextXAlignment = Enum.TextXAlignment.Left
-WmStats.Parent = Wm
+    local WmStats = Instance.new("TextLabel")
+    WmStats.Size = UDim2.new(1, -20, 0, 16)
+    WmStats.Position = UDim2.new(0, 14, 0, 23)
+    WmStats.BackgroundTransparency = 1
+    WmStats.Text = "60 FPS  ·  0 ms  ·  " .. LocalPlayer.Name
+    WmStats.TextColor3 = C_DIM
+    WmStats.TextSize = 11
+    WmStats.Font = Enum.Font.Gotham
+    WmStats.TextXAlignment = Enum.TextXAlignment.Left
+    WmStats.Parent = Wm
 
-local frameCount, fps = 0, 0
-task.spawn(function()
-    while Wm.Parent do
-        frameCount = 0
-        task.wait(1)
-        fps = frameCount
-    end
-end)
-RunService.RenderStepped:Connect(function() frameCount = frameCount + 1 end)
+    local frameCount, fps = 0, 0
+    task.spawn(function()
+        while Wm.Parent do
+            frameCount = 0
+            task.wait(1)
+            fps = frameCount
+        end
+    end)
+    RunService.RenderStepped:Connect(function() frameCount = frameCount + 1 end)
 
-task.spawn(function()
-    while Wm.Parent do
-        local ok, ping = pcall(function()
-            return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
-        WmStats.Text = string.format("%d FPS  ·  %d ms  ·  %s", fps, ok and ping or 0, LocalPlayer.Name)
-        task.wait(0.5)
-    end
-end)
+    task.spawn(function()
+        while Wm.Parent do
+            local ok, ping = pcall(function()
+                return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            WmStats.Text = string.format("%d FPS  ·  %d ms  ·  %s", fps, ok and ping or 0, LocalPlayer.Name)
+            task.wait(0.5)
+        end
+    end)
+end
 
 -- ========== PLAYER LIST ==========
 local playerListTumbler
 local PlayerListGui = Instance.new("ScreenGui")
 PlayerListGui.Name = "WiaPlayerList"
 PlayerListGui.ResetOnSpawn = false
-PlayerListGui.Parent = CoreGui
 PlayerListGui.Enabled = false
+parentGui(PlayerListGui)
 
-local plV = workspace.CurrentCamera.ViewportSize
-local plW = math.clamp(plV.X * 0.5, 260, 340)
-local plH = math.clamp(plV.Y - 80, 200, 400)
+local PlayerListMain, PlayerListTitle, PlayerListContainer, TargetStatus, ResetTargetBtn
+do
+    local plV = workspace.CurrentCamera.ViewportSize
+    local plW = math.clamp(plV.X * 0.5, 260, 340)
+    local plH = math.clamp(plV.Y - 80, 200, 400)
 
-local PlayerListMain = Instance.new("Frame")
-PlayerListMain.Size = UDim2.new(0, plW, 0, plH)
-PlayerListMain.Position = UDim2.new(1, -plW - 70, 0, 70)
-PlayerListMain.BackgroundColor3 = C_BG
-PlayerListMain.BackgroundTransparency = 0.1
-PlayerListMain.BorderSizePixel = 0
-PlayerListMain.ClipsDescendants = true
-PlayerListMain.Parent = PlayerListGui
-addCorner(PlayerListMain, 12)
+    PlayerListMain = Instance.new("Frame")
+    PlayerListMain.Size = UDim2.new(0, plW, 0, plH)
+    PlayerListMain.Position = UDim2.new(1, -plW - 70, 0, 70)
+    PlayerListMain.BackgroundColor3 = C_BG
+    PlayerListMain.BackgroundTransparency = 0.1
+    PlayerListMain.BorderSizePixel = 0
+    PlayerListMain.ClipsDescendants = true
+    PlayerListMain.Parent = PlayerListGui
+    addCorner(PlayerListMain, 12)
 
-local plStroke = Instance.new("UIStroke")
-plStroke.Color = C_STROKE
-plStroke.Thickness = 1
-plStroke.Transparency = 0.2
-plStroke.Parent = PlayerListMain
+    local plStroke = Instance.new("UIStroke")
+    plStroke.Color = C_STROKE
+    plStroke.Thickness = 1
+    plStroke.Transparency = 0.2
+    plStroke.Parent = PlayerListMain
 
-local PlayerListTitle = Instance.new("TextLabel")
-PlayerListTitle.Size = UDim2.new(1, -56, 0, 36)
-PlayerListTitle.Position = UDim2.new(0, 14, 0, 0)
-PlayerListTitle.Text = "ИГРОКИ"
-PlayerListTitle.TextColor3 = C_ACCENT
-PlayerListTitle.TextSize = 14
-PlayerListTitle.TextXAlignment = Enum.TextXAlignment.Left
-PlayerListTitle.BackgroundTransparency = 1
-PlayerListTitle.Font = Enum.Font.GothamBold
-PlayerListTitle.Parent = PlayerListMain
+    PlayerListTitle = Instance.new("TextLabel")
+    PlayerListTitle.Size = UDim2.new(1, -56, 0, 36)
+    PlayerListTitle.Position = UDim2.new(0, 14, 0, 0)
+    PlayerListTitle.Text = "ИГРОКИ"
+    PlayerListTitle.TextColor3 = C_ACCENT
+    PlayerListTitle.TextSize = 14
+    PlayerListTitle.TextXAlignment = Enum.TextXAlignment.Left
+    PlayerListTitle.BackgroundTransparency = 1
+    PlayerListTitle.Font = Enum.Font.GothamBold
+    PlayerListTitle.Parent = PlayerListMain
 
-local PlayerListClose = Instance.new("TextButton")
-PlayerListClose.Size = UDim2.new(0, 30, 0, 26)
-PlayerListClose.Position = UDim2.new(1, -38, 0, 5)
-PlayerListClose.Text = "✕"
-PlayerListClose.TextColor3 = C_DIM
-PlayerListClose.TextSize = 14
-PlayerListClose.Font = Enum.Font.GothamBold
-PlayerListClose.BackgroundColor3 = C_ROW
-PlayerListClose.BorderSizePixel = 0
-PlayerListClose.Parent = PlayerListMain
-addCorner(PlayerListClose, 6)
-PlayerListClose.MouseButton1Click:Connect(function()
-    if playerListTumbler then playerListTumbler.setState(false) else PlayerListGui.Enabled = false end
-end)
+    local PlayerListClose = Instance.new("TextButton")
+    PlayerListClose.Size = UDim2.new(0, 30, 0, 26)
+    PlayerListClose.Position = UDim2.new(1, -38, 0, 5)
+    PlayerListClose.Text = "✕"
+    PlayerListClose.TextColor3 = C_DIM
+    PlayerListClose.TextSize = 14
+    PlayerListClose.Font = Enum.Font.GothamBold
+    PlayerListClose.BackgroundColor3 = C_ROW
+    PlayerListClose.BorderSizePixel = 0
+    PlayerListClose.Parent = PlayerListMain
+    addCorner(PlayerListClose, 6)
+    PlayerListClose.MouseButton1Click:Connect(function()
+        if playerListTumbler then playerListTumbler.setState(false) else PlayerListGui.Enabled = false end
+    end)
 
-local plScroll = Instance.new("ScrollingFrame")
-plScroll.Size = UDim2.new(1, -8, 1, -84)
-plScroll.Position = UDim2.new(0, 4, 0, 38)
-plScroll.BackgroundTransparency = 1
-plScroll.BorderSizePixel = 0
-plScroll.ScrollBarThickness = 3
-plScroll.ScrollBarImageColor3 = C_ACCENT
-plScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-plScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-plScroll.Parent = PlayerListMain
+    local plScroll = Instance.new("ScrollingFrame")
+    plScroll.Size = UDim2.new(1, -8, 1, -84)
+    plScroll.Position = UDim2.new(0, 4, 0, 38)
+    plScroll.BackgroundTransparency = 1
+    plScroll.BorderSizePixel = 0
+    plScroll.ScrollBarThickness = 3
+    plScroll.ScrollBarImageColor3 = C_ACCENT
+    plScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    plScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    plScroll.Parent = PlayerListMain
 
-local plLayout = Instance.new("UIListLayout")
-plLayout.Padding = UDim.new(0, 6)
-plLayout.SortOrder = Enum.SortOrder.LayoutOrder
-plLayout.Parent = plScroll
+    local plLayout = Instance.new("UIListLayout")
+    plLayout.Padding = UDim.new(0, 6)
+    plLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    plLayout.Parent = plScroll
 
-local plPad = Instance.new("UIPadding")
-plPad.PaddingLeft = UDim.new(0, 4)
-plPad.PaddingRight = UDim.new(0, 6)
-plPad.PaddingTop = UDim.new(0, 2)
-plPad.PaddingBottom = UDim.new(0, 6)
-plPad.Parent = plScroll
+    local plPad = Instance.new("UIPadding")
+    plPad.PaddingLeft = UDim.new(0, 4)
+    plPad.PaddingRight = UDim.new(0, 6)
+    plPad.PaddingTop = UDim.new(0, 2)
+    plPad.PaddingBottom = UDim.new(0, 6)
+    plPad.Parent = plScroll
 
-local PlayerListContainer = plScroll
+    PlayerListContainer = plScroll
 
-local TargetStatus = Instance.new("TextLabel")
-TargetStatus.Size = UDim2.new(1, -96, 0, 36)
-TargetStatus.Position = UDim2.new(0, 14, 1, -42)
-TargetStatus.BackgroundTransparency = 1
-TargetStatus.Text = "Цель: авто (ближайший)"
-TargetStatus.TextColor3 = C_DIM
-TargetStatus.TextXAlignment = Enum.TextXAlignment.Left
-TargetStatus.TextTruncate = Enum.TextTruncate.AtEnd
-TargetStatus.Font = Enum.Font.Gotham
-TargetStatus.TextSize = 12
-TargetStatus.Parent = PlayerListMain
+    TargetStatus = Instance.new("TextLabel")
+    TargetStatus.Size = UDim2.new(1, -96, 0, 36)
+    TargetStatus.Position = UDim2.new(0, 14, 1, -42)
+    TargetStatus.BackgroundTransparency = 1
+    TargetStatus.Text = "Цель: авто (ближайший)"
+    TargetStatus.TextColor3 = C_DIM
+    TargetStatus.TextXAlignment = Enum.TextXAlignment.Left
+    TargetStatus.TextTruncate = Enum.TextTruncate.AtEnd
+    TargetStatus.Font = Enum.Font.Gotham
+    TargetStatus.TextSize = 12
+    TargetStatus.Parent = PlayerListMain
 
-local ResetTargetBtn = Instance.new("TextButton")
-ResetTargetBtn.Size = UDim2.new(0, 66, 0, 30)
-ResetTargetBtn.Position = UDim2.new(1, -74, 1, -38)
-ResetTargetBtn.Text = "СБРОС"
-ResetTargetBtn.TextColor3 = C_TEXT
-ResetTargetBtn.TextSize = 11
-ResetTargetBtn.Font = Enum.Font.GothamBold
-ResetTargetBtn.BackgroundColor3 = C_ROW
-ResetTargetBtn.BorderSizePixel = 0
-ResetTargetBtn.Parent = PlayerListMain
-addCorner(ResetTargetBtn, 8)
+    ResetTargetBtn = Instance.new("TextButton")
+    ResetTargetBtn.Size = UDim2.new(0, 66, 0, 30)
+    ResetTargetBtn.Position = UDim2.new(1, -74, 1, -38)
+    ResetTargetBtn.Text = "СБРОС"
+    ResetTargetBtn.TextColor3 = C_TEXT
+    ResetTargetBtn.TextSize = 11
+    ResetTargetBtn.Font = Enum.Font.GothamBold
+    ResetTargetBtn.BackgroundColor3 = C_ROW
+    ResetTargetBtn.BorderSizePixel = 0
+    ResetTargetBtn.Parent = PlayerListMain
+    addCorner(ResetTargetBtn, 8)
+end
 
 -- ========== DRAG ==========
 local function makeDraggable(frame, handle)
@@ -707,105 +733,108 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "WiaHubGUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
 ScreenGui.Enabled = true
+parentGui(ScreenGui)
 
-local vp0 = Camera.ViewportSize
-local menuW = math.clamp(vp0.X - 20, 250, 330)
-local menuH = math.clamp(vp0.Y - 40, 240, 470)
+local MainFrame, Title, Underline, MinBtn, TabBar, PageHolder, StatusBar
+do
+    local vp0 = Camera.ViewportSize
+    local menuW = math.clamp(vp0.X - 20, 250, 330)
+    local menuH = math.clamp(vp0.Y - 40, 240, 470)
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, menuW, 0, menuH)
-MainFrame.Position = UDim2.new(0, 12, 0, 12)
-MainFrame.BackgroundColor3 = C_BG
-MainFrame.BackgroundTransparency = 0.05
-MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-addCorner(MainFrame, 12)
+    MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, menuW, 0, menuH)
+    MainFrame.Position = UDim2.new(0, 12, 0, 12)
+    MainFrame.BackgroundColor3 = C_BG
+    MainFrame.BackgroundTransparency = 0.05
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+    addCorner(MainFrame, 12)
 
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = C_STROKE
-mainStroke.Thickness = 1
-mainStroke.Transparency = 0.15
-mainStroke.Parent = MainFrame
+    local mainStroke = Instance.new("UIStroke")
+    mainStroke.Color = C_STROKE
+    mainStroke.Thickness = 1
+    mainStroke.Transparency = 0.15
+    mainStroke.Parent = MainFrame
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -50, 0, 34)
-Title.Position = UDim2.new(0, 14, 0, 0)
-Title.Text = "WIA HUB"
-Title.TextColor3 = C_TEXT
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
+    Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -50, 0, 34)
+    Title.Position = UDim2.new(0, 14, 0, 0)
+    Title.Text = "WIA HUB"
+    Title.TextColor3 = C_TEXT
+    Title.TextSize = 16
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.BackgroundTransparency = 1
+    Title.Font = Enum.Font.GothamBold
+    Title.Parent = MainFrame
 
-local TitleVer = Instance.new("TextLabel")
-TitleVer.Size = UDim2.new(0, 40, 0, 34)
-TitleVer.Position = UDim2.new(0, 76, 0, 0)
-TitleVer.Text = "v12"
-TitleVer.TextColor3 = C_DIM
-TitleVer.TextSize = 11
-TitleVer.TextXAlignment = Enum.TextXAlignment.Left
-TitleVer.BackgroundTransparency = 1
-TitleVer.Font = Enum.Font.Gotham
-TitleVer.Parent = MainFrame
+    local TitleVer = Instance.new("TextLabel")
+    TitleVer.Size = UDim2.new(0, 40, 0, 34)
+    TitleVer.Position = UDim2.new(0, 76, 0, 0)
+    TitleVer.Text = "v12"
+    TitleVer.TextColor3 = C_DIM
+    TitleVer.TextSize = 11
+    TitleVer.TextXAlignment = Enum.TextXAlignment.Left
+    TitleVer.BackgroundTransparency = 1
+    TitleVer.Font = Enum.Font.Gotham
+    TitleVer.Parent = MainFrame
 
-local Underline = Instance.new("Frame")
-Underline.Size = UDim2.new(1, -24, 0, 1)
-Underline.Position = UDim2.new(0, 12, 0, 34)
-Underline.BackgroundColor3 = C_STROKE
-Underline.BorderSizePixel = 0
-Underline.Parent = MainFrame
+    Underline = Instance.new("Frame")
+    Underline.Size = UDim2.new(1, -24, 0, 1)
+    Underline.Position = UDim2.new(0, 12, 0, 34)
+    Underline.BackgroundColor3 = C_STROKE
+    Underline.BorderSizePixel = 0
+    Underline.Parent = MainFrame
 
-local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 26, 0, 24)
-MinBtn.Position = UDim2.new(1, -32, 0, 5)
-MinBtn.Text = "—"
-MinBtn.TextColor3 = C_DIM
-MinBtn.BackgroundColor3 = C_ROW
-MinBtn.BorderSizePixel = 0
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 14
-MinBtn.ZIndex = 5
-MinBtn.Parent = MainFrame
-addCorner(MinBtn, 6)
+    MinBtn = Instance.new("TextButton")
+    MinBtn.Size = UDim2.new(0, 26, 0, 24)
+    MinBtn.Position = UDim2.new(1, -32, 0, 5)
+    MinBtn.Text = "—"
+    MinBtn.TextColor3 = C_DIM
+    MinBtn.BackgroundColor3 = C_ROW
+    MinBtn.BorderSizePixel = 0
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.TextSize = 14
+    MinBtn.ZIndex = 5
+    MinBtn.Parent = MainFrame
+    addCorner(MinBtn, 6)
 
-local TabBar = Instance.new("ScrollingFrame")
-TabBar.Size = UDim2.new(1, -12, 0, 30)
-TabBar.Position = UDim2.new(0, 6, 0, 39)
-TabBar.BackgroundTransparency = 1
-TabBar.BorderSizePixel = 0
-TabBar.ScrollBarThickness = 0
-TabBar.ScrollingDirection = Enum.ScrollingDirection.X
-TabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
-TabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
-TabBar.Parent = MainFrame
+    TabBar = Instance.new("ScrollingFrame")
+    TabBar.Size = UDim2.new(1, -12, 0, 30)
+    TabBar.Position = UDim2.new(0, 6, 0, 39)
+    TabBar.BackgroundTransparency = 1
+    TabBar.BorderSizePixel = 0
+    TabBar.ScrollBarThickness = 0
+    TabBar.ScrollingDirection = Enum.ScrollingDirection.X
+    TabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+    TabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
+    TabBar.Parent = MainFrame
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.Padding = UDim.new(0, 6)
-tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabLayout.Parent = TabBar
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabLayout.Padding = UDim.new(0, 6)
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabLayout.Parent = TabBar
 
-local PageHolder = Instance.new("Frame")
-PageHolder.Size = UDim2.new(1, 0, 1, -98)
-PageHolder.Position = UDim2.new(0, 0, 0, 74)
-PageHolder.BackgroundTransparency = 1
-PageHolder.ClipsDescendants = true
-PageHolder.Parent = MainFrame
+    PageHolder = Instance.new("Frame")
+    PageHolder.Size = UDim2.new(1, 0, 1, -98)
+    PageHolder.Position = UDim2.new(0, 0, 0, 74)
+    PageHolder.BackgroundTransparency = 1
+    PageHolder.ClipsDescendants = true
+    PageHolder.Parent = MainFrame
 
-local StatusBar = Instance.new("TextLabel")
-StatusBar.Size = UDim2.new(1, -20, 0, 20)
-StatusBar.Position = UDim2.new(0, 12, 1, -22)
-StatusBar.Text = "Ready"
-StatusBar.TextColor3 = C_DIM
-StatusBar.TextSize = 11
-StatusBar.TextXAlignment = Enum.TextXAlignment.Left
-StatusBar.BackgroundTransparency = 1
-StatusBar.Font = Enum.Font.Gotham
-StatusBar.Parent = MainFrame
+    StatusBar = Instance.new("TextLabel")
+    StatusBar.Size = UDim2.new(1, -20, 0, 20)
+    StatusBar.Position = UDim2.new(0, 12, 1, -22)
+    StatusBar.Text = "Ready"
+    StatusBar.TextColor3 = C_DIM
+    StatusBar.TextSize = 11
+    StatusBar.TextXAlignment = Enum.TextXAlignment.Left
+    StatusBar.BackgroundTransparency = 1
+    StatusBar.Font = Enum.Font.Gotham
+    StatusBar.Parent = MainFrame
+end
 
 local function setStatus(text, color)
     StatusBar.Text = text
@@ -821,11 +850,7 @@ local function selectTab(name)
             BackgroundColor3 = on and C_ACCENT or C_ROW,
             TextColor3 = on and C_TEXT or C_DIM,
         }):Play()
-        if on then
-            t.page.Visible = true
-        else
-            t.page.Visible = false
-        end
+        t.page.Visible = on
     end
 end
 
@@ -874,69 +899,73 @@ local function createTab(name)
     return page
 end
 
-local minimized = false
-local fullSize = MainFrame.Size
-MinBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        fullSize = MainFrame.Size
-        TabBar.Visible, PageHolder.Visible, StatusBar.Visible, Underline.Visible = false, false, false, false
-        MainFrame.Size = UDim2.new(0, fullSize.X.Offset, 0, 34)
-        MinBtn.Text = "+"
-    else
-        MainFrame.Size = fullSize
-        TabBar.Visible, PageHolder.Visible, StatusBar.Visible, Underline.Visible = true, true, true, true
-        MinBtn.Text = "—"
-    end
-end)
+do
+    local minimized = false
+    local fullSize = MainFrame.Size
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        if minimized then
+            fullSize = MainFrame.Size
+            TabBar.Visible, PageHolder.Visible, StatusBar.Visible, Underline.Visible = false, false, false, false
+            MainFrame.Size = UDim2.new(0, fullSize.X.Offset, 0, 34)
+            MinBtn.Text = "+"
+        else
+            MainFrame.Size = fullSize
+            TabBar.Visible, PageHolder.Visible, StatusBar.Visible, Underline.Visible = true, true, true, true
+            MinBtn.Text = "—"
+        end
+    end)
+end
 
 makeDraggable(MainFrame, Title)
 makeDraggable(PlayerListMain, PlayerListTitle)
 
--- ========== TOGGLE ==========
-local ToggleGui = Instance.new("ScreenGui")
-ToggleGui.Name = "WiaToggle"
-ToggleGui.ResetOnSpawn = false
-ToggleGui.Parent = CoreGui
+-- ========== TOGGLE BUTTON ==========
+do
+    local ToggleGui = Instance.new("ScreenGui")
+    ToggleGui.Name = "WiaToggle"
+    ToggleGui.ResetOnSpawn = false
+    parentGui(ToggleGui)
 
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 42, 0, 42)
-ToggleBtn.Position = UDim2.new(1, -58, 0, 60)
-ToggleBtn.Text = "W"
-ToggleBtn.TextColor3 = C_TEXT
-ToggleBtn.BackgroundColor3 = C_ACCENT
-ToggleBtn.BackgroundTransparency = 0.1
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 18
-ToggleBtn.Parent = ToggleGui
-addCorner(ToggleBtn, 21)
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0, 42, 0, 42)
+    ToggleBtn.Position = UDim2.new(1, -58, 0, 60)
+    ToggleBtn.Text = "W"
+    ToggleBtn.TextColor3 = C_TEXT
+    ToggleBtn.BackgroundColor3 = C_ACCENT
+    ToggleBtn.BackgroundTransparency = 0.1
+    ToggleBtn.BorderSizePixel = 0
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.TextSize = 18
+    ToggleBtn.Parent = ToggleGui
+    addCorner(ToggleBtn, 21)
 
-makeDraggable(ToggleBtn)
+    makeDraggable(ToggleBtn)
 
-local pressPos
-ToggleBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        pressPos = input.Position
-    end
-end)
-ToggleBtn.InputEnded:Connect(function(input)
-    if pressPos and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
-        if (input.Position - pressPos).Magnitude < 8 then
-            guiVisible = not guiVisible
-            ScreenGui.Enabled = guiVisible
-            if playerListEnabled then PlayerListGui.Enabled = guiVisible end
+    local pressPos
+    ToggleBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            pressPos = input.Position
         end
-        pressPos = nil
-    end
-end)
+    end)
+    ToggleBtn.InputEnded:Connect(function(input)
+        if pressPos and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+            if (input.Position - pressPos).Magnitude < 8 then
+                guiVisible = not guiVisible
+                ScreenGui.Enabled = guiVisible
+                if playerListEnabled then PlayerListGui.Enabled = guiVisible end
+            end
+            pressPos = nil
+        end
+    end)
+end
 
 -- ========== FLY BUTTONS ==========
 local FlyGui = Instance.new("ScreenGui")
 FlyGui.Name = "WiaFly"
 FlyGui.ResetOnSpawn = false
 FlyGui.Enabled = false
-FlyGui.Parent = CoreGui
+parentGui(FlyGui)
 
 local function makeFlyButton(text, position, setHeld)
     local b = Instance.new("TextButton")
@@ -1238,7 +1267,6 @@ local function createSlider(labelText, minVal, maxVal, defaultVal, callback)
     return { setValue = function(v) value = v setVisual(v) end }
 end
 
--- ✅ FIX: createButton теперь передаёт кнопку в callback
 local function createButton(labelText, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 36)
@@ -1267,62 +1295,64 @@ local function createButton(labelText, callback)
 end
 
 -- ========== SEARCH BAR ==========
-local searchFrame = Instance.new("Frame")
-searchFrame.Size = UDim2.new(1, -24, 0, 32)
-searchFrame.Position = UDim2.new(0, 12, 0, 74)
-searchFrame.BackgroundColor3 = C_ROW
-searchFrame.BorderSizePixel = 0
-searchFrame.Parent = MainFrame
-addCorner(searchFrame, 8)
+do
+    local searchFrame = Instance.new("Frame")
+    searchFrame.Size = UDim2.new(1, -24, 0, 32)
+    searchFrame.Position = UDim2.new(0, 12, 0, 74)
+    searchFrame.BackgroundColor3 = C_ROW
+    searchFrame.BorderSizePixel = 0
+    searchFrame.Parent = MainFrame
+    addCorner(searchFrame, 8)
 
-local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1, -44, 1, 0)
-searchBox.Position = UDim2.new(0, 12, 0, 0)
-searchBox.BackgroundTransparency = 1
-searchBox.Text = ""
-searchBox.PlaceholderText = "Поиск функций..."
-searchBox.TextColor3 = C_TEXT
-searchBox.PlaceholderColor3 = C_DIM
-searchBox.TextSize = 12
-searchBox.Font = Enum.Font.Gotham
-searchBox.TextXAlignment = Enum.TextXAlignment.Left
-searchBox.ClearTextOnFocus = false
-searchBox.Parent = searchFrame
-
-local clearBtn = Instance.new("TextButton")
-clearBtn.Size = UDim2.new(0, 24, 0, 24)
-clearBtn.Position = UDim2.new(1, -32, 0, 4)
-clearBtn.Text = "✕"
-clearBtn.TextColor3 = C_DIM
-clearBtn.BackgroundColor3 = C_ROW_D
-clearBtn.TextSize = 12
-clearBtn.Font = Enum.Font.GothamBold
-clearBtn.BorderSizePixel = 0
-clearBtn.Parent = searchFrame
-addCorner(clearBtn, 6)
-
-clearBtn.MouseButton1Click:Connect(function()
+    local searchBox = Instance.new("TextBox")
+    searchBox.Size = UDim2.new(1, -44, 1, 0)
+    searchBox.Position = UDim2.new(0, 12, 0, 0)
+    searchBox.BackgroundTransparency = 1
     searchBox.Text = ""
-    for _, el in ipairs(allElements) do
-        if el.obj and el.obj.Parent then el.obj.Visible = true end
-    end
-end)
+    searchBox.PlaceholderText = "Поиск функций..."
+    searchBox.TextColor3 = C_TEXT
+    searchBox.PlaceholderColor3 = C_DIM
+    searchBox.TextSize = 12
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    searchBox.ClearTextOnFocus = false
+    searchBox.Parent = searchFrame
 
-searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    local query = searchBox.Text:lower()
-    if query == "" then
+    local clearBtn = Instance.new("TextButton")
+    clearBtn.Size = UDim2.new(0, 24, 0, 24)
+    clearBtn.Position = UDim2.new(1, -32, 0, 4)
+    clearBtn.Text = "✕"
+    clearBtn.TextColor3 = C_DIM
+    clearBtn.BackgroundColor3 = C_ROW_D
+    clearBtn.TextSize = 12
+    clearBtn.Font = Enum.Font.GothamBold
+    clearBtn.BorderSizePixel = 0
+    clearBtn.Parent = searchFrame
+    addCorner(clearBtn, 6)
+
+    clearBtn.MouseButton1Click:Connect(function()
+        searchBox.Text = ""
         for _, el in ipairs(allElements) do
             if el.obj and el.obj.Parent then el.obj.Visible = true end
         end
-        return
-    end
-    for _, el in ipairs(allElements) do
-        if el.obj and el.obj.Parent and el.name then
-            local match = el.name:lower():find(query, 1, true)
-            el.obj.Visible = match ~= nil
+    end)
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local query = searchBox.Text:lower()
+        if query == "" then
+            for _, el in ipairs(allElements) do
+                if el.obj and el.obj.Parent then el.obj.Visible = true end
+            end
+            return
         end
-    end
-end)
+        for _, el in ipairs(allElements) do
+            if el.obj and el.obj.Parent and el.name then
+                local match = el.name:lower():find(query, 1, true)
+                el.obj.Visible = match ~= nil
+            end
+        end
+    end)
+end
 
 PageHolder.Position = UDim2.new(0, 0, 0, 112)
 PageHolder.Size = UDim2.new(1, 0, 1, -136)
@@ -1463,7 +1493,7 @@ local function loadF3X()
     return false
 end
 
--- ========== SILENT AIM (fixed) ==========
+-- ========== SILENT AIM ==========
 if hookmetamethod and getnamecallmethod then
     pcall(function()
         local old
@@ -1578,7 +1608,6 @@ updatePlayerList = function()
             row.Parent = PlayerListContainer
             addCorner(row, 8)
 
-            -- name width reduced so SP/TP/AIM buttons are clearly visible
             local nm = Instance.new("TextLabel")
             nm.Size = UDim2.new(1, -160, 1, 0)
             nm.Position = UDim2.new(0, 10, 0, 0)
@@ -1636,6 +1665,15 @@ Players.PlayerRemoving:Connect(function(plr)
 end)
 
 -- ========== AIMBOT ==========
+local fovCircle = Drawing and Drawing.new("Circle") or nil
+if fovCircle then
+    fovCircle.Thickness = 1
+    fovCircle.NumSides = 64
+    fovCircle.Filled = false
+    fovCircle.Color = C_ACCENT
+    fovCircle.Visible = false
+end
+
 local function getAimbotTarget()
     if aimbotSelectedTarget and aimbotSelectedTarget.Character and aimbotSelectedTarget.Character:FindFirstChild("Head") then
         return aimbotSelectedTarget
@@ -1749,7 +1787,6 @@ local function getText(pool, index)
     return pool[index]
 end
 
--- ✅ FIX: Skeleton transparency + thickness + optional self-test
 local skeletonSelfTest = false
 
 RunService.RenderStepped:Connect(function()
@@ -1846,7 +1883,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ===== ITEM ESP (uses separate counter so it doesn't hide player texts) =====
+    -- ===== ITEM ESP =====
     if itemEspEnabled then
         for _, obj in pairs(workspace:GetDescendants()) do
             local tool = obj:IsA("Tool") and obj or (obj:IsA("Model") and obj:FindFirstChildOfClass("Tool"))
@@ -1937,7 +1974,7 @@ function toggleFreecam(st)
     end
 end
 
--- ========== SPECTATE (fixed) ==========
+-- ========== SPECTATE ==========
 RunService.RenderStepped:Connect(function()
     if spectateTarget then
         local char = spectateTarget.Character
@@ -2025,26 +2062,27 @@ createTumbler("Chams (Wallhack)", false).onToggle(function(st)
 end)
 createSlider("Chams Opacity %", 0, 100, 35, function(v) chamsOpacity = v / 100 end)
 
--- ✅ FIX: color picker uses btn parameter passed by createButton
-local colors = {
-    {name = "Purple", c = Color3.fromRGB(124, 92, 255)},
-    {name = "Red", c = Color3.fromRGB(220, 80, 80)},
-    {name = "Green", c = Color3.fromRGB(80, 200, 120)},
-    {name = "Blue", c = Color3.fromRGB(80, 140, 220)},
-    {name = "Yellow", c = Color3.fromRGB(220, 200, 80)},
-    {name = "White", c = Color3.fromRGB(240, 240, 240)},
-}
-local espColorIdx, skelColorIdx = 1, 1
-createButton("ESP Color: " .. colors[espColorIdx].name, function(b)
-    espColorIdx = espColorIdx % #colors + 1
-    espColor = colors[espColorIdx].c
-    if b then b.Text = "ESP Color: " .. colors[espColorIdx].name end
-end)
-createButton("Skeleton Color: " .. colors[skelColorIdx].name, function(b)
-    skelColorIdx = skelColorIdx % #colors + 1
-    skeletonColor = colors[skelColorIdx].c
-    if b then b.Text = "Skeleton Color: " .. colors[skelColorIdx].name end
-end)
+do
+    local colors = {
+        {name = "Purple", c = Color3.fromRGB(124, 92, 255)},
+        {name = "Red", c = Color3.fromRGB(220, 80, 80)},
+        {name = "Green", c = Color3.fromRGB(80, 200, 120)},
+        {name = "Blue", c = Color3.fromRGB(80, 140, 220)},
+        {name = "Yellow", c = Color3.fromRGB(220, 200, 80)},
+        {name = "White", c = Color3.fromRGB(240, 240, 240)},
+    }
+    local espColorIdx, skelColorIdx = 1, 1
+    createButton("ESP Color: " .. colors[espColorIdx].name, function(b)
+        espColorIdx = espColorIdx % #colors + 1
+        espColor = colors[espColorIdx].c
+        if b then b.Text = "ESP Color: " .. colors[espColorIdx].name end
+    end)
+    createButton("Skeleton Color: " .. colors[skelColorIdx].name, function(b)
+        skelColorIdx = skelColorIdx % #colors + 1
+        skeletonColor = colors[skelColorIdx].c
+        if b then b.Text = "Skeleton Color: " .. colors[skelColorIdx].name end
+    end)
+end
 
 -- ========== TAB: MOVE ==========
 createTab("Move")
@@ -2083,8 +2121,7 @@ end)
 createSection("Dash")
 createTumbler("Dash", false).onToggle(function(st) dashEnabled = st end)
 createSlider("Dash Power", 30, 300, 90, function(v) dashPower = v end)
-local dashBtn
-dashBtn = createButton("Dash Key: " .. dashKey.Name, function(b)
+createButton("Dash Key: " .. dashKey.Name, function(b)
     if waitingHubBind then return end
     if b then b.Text = "Нажми клавишу..." end
     local c
@@ -2168,13 +2205,15 @@ createTumbler("Korblox", false).onToggle(function(st)
 end)
 
 createSection("Анимации")
-local sortedPacks = {}
-for name in pairs(PACKS) do table.insert(sortedPacks, name) end
-table.sort(sortedPacks, function(a, b) return a:lower() < b:lower() end)
-for _, animName in ipairs(sortedPacks) do
-    createButton("Анимация: " .. animName, function()
-        applyPack(animName)
-    end)
+do
+    local sortedPacks = {}
+    for name in pairs(PACKS) do table.insert(sortedPacks, name) end
+    table.sort(sortedPacks, function(a, b) return a:lower() < b:lower() end)
+    for _, animName in ipairs(sortedPacks) do
+        createButton("Анимация: " .. animName, function()
+            applyPack(animName)
+        end)
+    end
 end
 
 -- ========== TAB: WORLD ==========
@@ -2351,17 +2390,19 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local function bindAntiRagdoll(char)
-    local hum = char:WaitForChild("Humanoid", 5)
-    if not hum then return end
-    hum.StateChanged:Connect(function(_, new)
-        if antiRagdollEnabled and (new == Enum.HumanoidStateType.Ragdoll or new == Enum.HumanoidStateType.Physics) then
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end
-    end)
+do
+    local function bindAntiRagdoll(char)
+        local hum = char:WaitForChild("Humanoid", 5)
+        if not hum then return end
+        hum.StateChanged:Connect(function(_, new)
+            if antiRagdollEnabled and (new == Enum.HumanoidStateType.Ragdoll or new == Enum.HumanoidStateType.Physics) then
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end)
+    end
+    if LocalPlayer.Character then task.spawn(bindAntiRagdoll, LocalPlayer.Character) end
+    LocalPlayer.CharacterAdded:Connect(bindAntiRagdoll)
 end
-if LocalPlayer.Character then bindAntiRagdoll(LocalPlayer.Character) end
-LocalPlayer.CharacterAdded:Connect(bindAntiRagdoll)
 
 RunService.Heartbeat:Connect(function()
     if not wallRunEnabled then return end
@@ -2398,14 +2439,16 @@ task.spawn(function()
     end
 end)
 
-local vu = game:GetService("VirtualUser")
-LocalPlayer.Idled:Connect(function()
-    if antiAFKEnabled then
-        vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-    end
-end)
+do
+    local vu = game:GetService("VirtualUser")
+    LocalPlayer.Idled:Connect(function()
+        if antiAFKEnabled then
+            vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        end
+    end)
+end
 
 UserInputService.JumpRequest:Connect(function()
     if infiniteJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -2413,5 +2456,22 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-setStatus("WIA HUB v12.0 загружен", C_OK)
-notify("WIA HUB v12.0 готов", "success")
+setStatus("WIA HUB v12.1 загружен", C_OK)
+notify("WIA HUB v12.1 готов", "success")
+
+end -- main
+
+-- ========== ЗАПУСК С ПОКАЗОМ ОШИБОК ==========
+local ok, err = xpcall(main, function(e)
+    return tostring(e) .. "\n" .. debug.traceback()
+end)
+if not ok then
+    warn("[WIA HUB] Ошибка запуска:\n" .. tostring(err))
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "WIA HUB: ошибка",
+            Text = tostring(err):sub(1, 140),
+            Duration = 15,
+        })
+    end)
+end
