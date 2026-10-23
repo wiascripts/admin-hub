@@ -1,7 +1,7 @@
 -- ================================================================= --
 -- WIA HUB v12.3 :: whitewia / tordark
 -- CHANGES: Emotes -> SNIPER list (58k emotes, sniper-Emote JSON)
---          new Anims tab -> animation bundles (AnimationSniper + offsale)
+--          new Anims tab -> animation bundles (AnimationSniper + offsale)dik
 -- ================================================================= --
 
 local function main()
